@@ -1,0 +1,322 @@
+{
+	"info": {
+		"_postman_id": "librarium-api-collection",
+		"name": "🗡️ Librarium API - Gerenciador de Hábitos RPG",
+		"description": "Coleção completa da API do Librarium - Sistema gamificado de hábitos com temática dark fantasy",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000/api",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "🔐 Autenticação",
+			"item": [
+				{
+					"name": "Registrar Usuário",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nomeUsuario\": \"cacador_teste\",\n  \"email\": \"teste@librarium.com\",\n  \"senha\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/registrar",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "registrar"]
+						}
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('jwt_token', response.token);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"teste@librarium.com\",\n  \"senha\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Obter Perfil",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/perfil",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "perfil"]
+						}
+					}
+				},
+				{
+					"name": "Verificar Token",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/verificar",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "verificar"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "⚔️ Hábitos",
+			"item": [
+				{
+					"name": "Listar Hábitos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/habitos",
+							"host": ["{{base_url}}"],
+							"path": ["habitos"]
+						}
+					}
+				},
+				{
+					"name": "Criar Hábito",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"titulo\": \"Exercitar-se diariamente\",\n  \"descricao\": \"30 minutos de exercício físico\",\n  \"frequencia\": \"diario\",\n  \"categoria\": \"saude\",\n  \"dificuldade\": \"medio\",\n  \"icone\": \"espada\",\n  \"cor\": \"#FF6B6B\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/habitos",
+							"host": ["{{base_url}}"],
+							"path": ["habitos"]
+						}
+					}
+				},
+				{
+					"name": "Obter Hábito",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/habitos/:id",
+							"host": ["{{base_url}}"],
+							"path": ["habitos", ":id"]
+						}
+					}
+				},
+				{
+					"name": "Concluir Hábito",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"observacoes\": \"Completei 30 minutos de corrida!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/habitos/:id/concluir",
+							"host": ["{{base_url}}"],
+							"path": ["habitos", ":id", "concluir"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "👤 Usuários",
+			"item": [
+				{
+					"name": "Dashboard",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/usuarios/dashboard",
+							"host": ["{{base_url}}"],
+							"path": ["usuarios", "dashboard"]
+						}
+					}
+				},
+				{
+					"name": "Estatísticas",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/usuarios/estatisticas?periodo=30",
+							"host": ["{{base_url}}"],
+							"path": ["usuarios", "estatisticas"],
+							"query": [
+								{
+									"key": "periodo",
+									"value": "30"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Ranking",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/usuarios/ranking?limite=10",
+							"host": ["{{base_url}}"],
+							"path": ["usuarios", "ranking"],
+							"query": [
+								{
+									"key": "limite",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Conquistas",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/usuarios/conquistas",
+							"host": ["{{base_url}}"],
+							"path": ["usuarios", "conquistas"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📊 Estatísticas",
+			"item": [
+				{
+					"name": "Gráfico Semanal",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/estatisticas/grafico-semanal",
+							"host": ["{{base_url}}"],
+							"path": ["estatisticas", "grafico-semanal"]
+						}
+					}
+				},
+				{
+					"name": "Estatísticas por Categoria",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/estatisticas/categorias?periodo=30",
+							"host": ["{{base_url}}"],
+							"path": ["estatisticas", "categorias"],
+							"query": [
+								{
+									"key": "periodo",
+									"value": "30"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Heatmap",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/estatisticas/heatmap?ano=2024",
+							"host": ["{{base_url}}"],
+							"path": ["estatisticas", "heatmap"],
+							"query": [
+								{
+									"key": "ano",
+									"value": "2024"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Sistema",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/saude",
+							"host": ["{{base_url}}"],
+							"path": ["saude"]
+						}
+					}
+				}
+			]
+		}
+	]
+}

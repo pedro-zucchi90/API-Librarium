@@ -1,0 +1,52 @@
+{
+  "name": "librarium-backend",
+  "version": "1.0.0",
+  "description": "Gamified habit tracker backend - Librarium RPG Edition",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "test:avatar": "node test-avatar.js",
+    "test:conquistas": "node -e \"require('./services/achievementService').criarConquistasPadrao('teste')\"",
+    "test:export": "node -e \"console.log('Sistema de exportação configurado')\"",
+    "migrate:avatars": "node migrate-avatars.js"
+  },
+  "keywords": [
+    "habits",
+    "gamification",
+    "rpg",
+    "tracker",
+    "fantasy",
+    "mongodb",
+    "express",
+    "jwt"
+  ],
+  "author": "Zucchi",
+  "license": "MIT",
+  "dependencies": {
+    "archiver": "^6.0.1",
+    "axios": "^1.11.0",
+    "bcrypt": "^5.1.1",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.10.0",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.5.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "node-cron": "^3.0.3",
+    "winston": "^3.10.0",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}
