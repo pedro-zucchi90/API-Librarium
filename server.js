@@ -121,11 +121,6 @@ app.get('/api/saude', (req, res) => {
       exportacao: true,
       sistemaConquistas: true
     },
-    roadmap: {
-      mvp: '✅ Concluído',
-      versaoIntermediaria: '🔄 Em desenvolvimento',
-      versaoAvancada: '⏳ Planejado'
-    }
   });
 });
 

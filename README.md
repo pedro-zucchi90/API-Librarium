@@ -8,11 +8,11 @@
 
 > **Backend do Librarium** - Um gerenciador de hábitos gamificado com temática dark fantasy inspirado em Hollow Knight e Devil May Cry. Transforme sua jornada de desenvolvimento pessoal em uma aventura épica!
 
-## 🌟 **Visão Geral**
+## **Visão Geral**
 
 O Librarium é uma API RESTful completa que gamifica o processo de construção de hábitos através de um sistema RPG imersivo. Com avatares evolutivos, sistema de conquistas, multiplayer e integrações avançadas, transforma tarefas mundanas em missões épicas.
 
-## ✨ **Funcionalidades Principais**
+## **Funcionalidades Principais**
 
 ### 🎮 **Sistema de Gamificação Avançado**
 - **Sistema de XP e Níveis** - Progressão baseada em conquistas
@@ -48,7 +48,7 @@ O Librarium é uma API RESTful completa que gamifica o processo de construção 
 - **Estatísticas Detalhadas** - Análises profundas
 - **Sincronização Offline** - Funciona sem internet
 
-## 🏗️ **Arquitetura Técnica**
+## **Arquitetura Técnica**
 
 ### **Stack Principal**
 - **Node.js 18+** - Runtime JavaScript
@@ -71,7 +71,7 @@ O Librarium é uma API RESTful completa que gamifica o processo de construção 
 - **Error Handling** - Tratamento global de erros
 - **Input Sanitization** - Sanitização de dados
 
-## 🚀 **Instalação e Configuração**
+## **Instalação e Configuração**
 
 ### **Pré-requisitos**
 - Node.js 18+ 
@@ -155,7 +155,7 @@ LOG_LEVEL=warn
 
 4. **Deploy automático** acontecerá
 
-## 📚 **Documentação da API**
+## **Documentação da API**
 
 ### **Base URL**
 - **Local:** `http://localhost:3000/api`
@@ -292,7 +292,7 @@ curl -X POST https://seu-app.railway.app/api/habitos \
 | POST | `/comprar` | Comprar item | ✅ |
 | GET | `/inventario` | Inventário do usuário | ✅ |
 
-## 🎯 **Modelos de Dados**
+## **Modelos de Dados**
 
 ### **Usuário**
 ```javascript
@@ -390,7 +390,7 @@ curl -X POST https://seu-app.railway.app/api/habitos \
 }
 ```
 
-## 🎮 **Sistema de Gamificação**
+## **Sistema de Gamificação**
 
 ### **Níveis e Títulos**
 - **Nível 1-10**: Aspirante (100 XP por nível)
@@ -417,7 +417,7 @@ curl -X POST https://seu-app.railway.app/api/habitos \
 - **Efeitos Visuais** dinâmicos
 - **Personalização Avançada** de aparência
 
-## 🔒 **Segurança**
+## **Segurança**
 
 ### **Autenticação e Autorização**
 - **JWT (JSON Web Tokens)** para autenticação
@@ -438,7 +438,7 @@ curl -X POST https://seu-app.railway.app/api/habitos \
 - **Tratamento global de erros**
 - **Métricas de performance**
 
-## ⚙️ **Configuração Avançada**
+## **Configuração Avançada**
 
 ### **Variáveis de Ambiente Completas**
 
@@ -502,7 +502,7 @@ EXPORTACAO_DIRETORIO_TEMP=./temp
 EXPORTACAO_DIRETORIO_BACKUP=./backups
 ```
 
-## 🧪 **Testando a API**
+## **Testando a API**
 
 ### **Script de Teste Automatizado**
 ```bash
@@ -554,7 +554,7 @@ curl -X POST https://seu-app.railway.app/api/habitos \
   }'
 ```
 
-## 📊 **Monitoramento e Logs**
+## **Monitoramento e Logs**
 
 ### **Logs Estruturados**
 - **Desenvolvimento**: Logs detalhados no console
@@ -596,7 +596,7 @@ GET /api/saude
 }
 ```
 
-## 🚀 **Deploy e Produção**
+## **Deploy e Produção**
 
 ### **Railway (Recomendado)**
 1. Conecte seu repositório GitHub
@@ -621,7 +621,7 @@ EXPOSE 3000
 CMD ["npm", "start"]
 ```
 
-## 🤝 **Contribuição**
+## **Contribuição**
 
 ### **Como Contribuir**
 1. **Fork** o projeto
@@ -635,14 +635,6 @@ CMD ["npm", "start"]
 - **Prettier** para formatação
 - **Conventional Commits** para mensagens
 - **Testes** para novas funcionalidades
-
-### **Roadmap**
-- [ ] Sistema de notificações push
-- [ ] Integração com Apple Health
-- [ ] Modo offline completo
-- [ ] Sistema de guilds/clãs
-- [ ] Marketplace de equipamentos
-- [ ] Sistema de temporadas
 
 ## 📄 **Licença**
 
@@ -670,6 +662,5 @@ Transforme sua jornada de desenvolvimento pessoal em uma aventura épica. Cada h
 
 **Desenvolvido com ❤️ e muito ☕ por [Seu Nome]**
 
-[![GitHub](https://img.shields.io/badge/GitHub-Profile-black.svg)](https://github.com/seu-usuario)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue.svg)](https://linkedin.com/in/seu-usuario)
-[![Twitter](https://img.shields.io/badge/Twitter-Profile-blue.svg)](https://twitter.com/seu-usuario)
+[![GitHub](https://img.shields.io/badge/GitHub-Profile-black.svg)](https://github.com/pedro-zucchi90)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue.svg)](https://www.linkedin.com/in/pedro-zucchi-52b50132b/)
