@@ -192,4 +192,17 @@ exports.atualizarPreferencias = async (req, res) => {
   }
 };
 
+exports.adicionarXP = async (req, res) => {
+  try {
+    const { quantidade } = req.body;
+    const {usuario} = req;
+    usuario.experiencia += quantidade || 1000;
+    await usuario.save();
+    res.json({ sucesso: true, mensagem: `✨ ${quantidade || 1000} XP adicionado!`, experiencia: usuario.experiencia, nivel: usuario.nivel });
+  } catch (erro) {
+    console.error('Erro ao adicionar XP:', erro);
+    res.status(500).json({ erro: 'Erro interno do servidor', mensagem: '💀 Não foi possível adicionar XP...' });
+  }
+};
+
 

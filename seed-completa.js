@@ -509,7 +509,7 @@ async function testarEstatisticas() {
 
   // Sistema
   try {
-    const response = await axios.get(`${API_BASE}/stats/sistema`, { headers });
+    const response = await axios.get(`${API_BASE}/estatisticas/sistema`, { headers });
     logTest('Estatísticas do sistema', true);
   } catch (error) {
     logTest('Estatísticas do sistema', false, error.response?.data?.message || error.message);
@@ -517,7 +517,7 @@ async function testarEstatisticas() {
 
   // Gráfico semanal
   try {
-    const response = await axios.get(`${API_BASE}/stats/grafico-semanal`, { headers });
+    const response = await axios.get(`${API_BASE}/estatisticas/grafico-semanal`, { headers });
     logTest('Gráfico semanal', true);
   } catch (error) {
     logTest('Gráfico semanal', false, error.response?.data?.message || error.message);
@@ -525,7 +525,7 @@ async function testarEstatisticas() {
 
   // Categorias
   try {
-    const response = await axios.get(`${API_BASE}/stats/categorias`, { headers });
+    const response = await axios.get(`${API_BASE}/estatisticas/categorias`, { headers });
     logTest('Estatísticas por categorias', true);
   } catch (error) {
     logTest('Estatísticas por categorias', false, error.response?.data?.message || error.message);
@@ -533,7 +533,7 @@ async function testarEstatisticas() {
 
   // Heatmap
   try {
-    const response = await axios.get(`${API_BASE}/stats/heatmap`, { headers });
+    const response = await axios.get(`${API_BASE}/estatisticas/heatmap`, { headers });
     logTest('Heatmap de atividades', true);
   } catch (error) {
     logTest('Heatmap de atividades', false, error.response?.data?.message || error.message);
@@ -541,7 +541,7 @@ async function testarEstatisticas() {
 
   // Comparativo mensal
   try {
-    const response = await axios.get(`${API_BASE}/stats/comparativo-mensal`, { headers });
+    const response = await axios.get(`${API_BASE}/estatisticas/comparativo-mensal`, { headers });
     logTest('Comparativo mensal', true);
   } catch (error) {
     logTest('Comparativo mensal', false, error.response?.data?.message || error.message);
@@ -568,11 +568,20 @@ async function testarLoja() {
     logTest('Listar itens da loja', false, error.response?.data?.message || error.message);
   }
 
+  // Dar XP ao usuário primeiro
+  try {
+    const response = await axios.post(`${API_BASE}/usuarios/adicionar-xp`, {
+      quantidade: 1000
+    }, { headers });
+    logTest('Adicionar XP ao usuário', true);
+  } catch (error) {
+    logTest('Adicionar XP ao usuário', false, error.response?.data?.message || error.message);
+  }
+
   // Comprar item (se houver itens disponíveis)
   try {
     const response = await axios.post(`${API_BASE}/loja/comprar`, {
-      itemId: 'skin1',
-      quantidade: 1
+      itemId: 'skin1'
     }, { headers });
     logTest('Comprar item da loja', true);
   } catch (error) {
@@ -701,10 +710,10 @@ async function testarMultiplayer() {
   const headers1 = { Authorization: `Bearer ${authTokens[primeiroUsuario]}` };
   const headers2 = segundoUsuario ? { Authorization: `Bearer ${authTokens[segundoUsuario]}` } : headers1;
 
-  // Criar batalha
+  // Criar batalha (usar o mesmo usuário como oponente se não houver segundo usuário)
   try {
     const response = await axios.post(`${API_BASE}/multiplayer/batalha/criar`, {
-      oponenteId: segundoUsuario ? createdUsers[segundoUsuario]._id : createdUsers[primeiroUsuario]._id,
+      oponenteId: 'self', // Usar self para batalha solo
       tipo: 'habitos',
       duracao: 7
     }, { headers: headers1 });
@@ -742,10 +751,10 @@ async function testarMultiplayer() {
     logTest('Listar desafios', false, error.response?.data?.message || error.message);
   }
 
-  // Enviar mensagem
+  // Enviar mensagem (usar self se não houver segundo usuário)
   try {
     const response = await axios.post(`${API_BASE}/multiplayer/mensagem`, {
-      destinatarioId: segundoUsuario ? createdUsers[segundoUsuario]._id : createdUsers[primeiroUsuario]._id,
+      destinatarioId: 'self', // Usar self para mensagem solo
       conteudo: 'Mensagem de teste da seed',
       tipo: 'texto'
     }, { headers: headers1 });

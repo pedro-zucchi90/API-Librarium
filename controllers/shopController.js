@@ -21,9 +21,21 @@ exports.comprar = async (req, res) => {
       return res.status(400).json({ erro: 'XP insuficiente', mensagem: '⚠️ Você não tem XP suficiente para comprar este item.' });
     }
     usuario.experiencia -= item.precoXP;
-    if (item.tipo === 'armadura') {usuario.personalizacaoAvatar.armadura = item.nome};
-    if (item.tipo === 'arma') {usuario.personalizacaoAvatar.arma = item.nome};
-    if (item.tipo === 'acessorio') {usuario.personalizacaoAvatar.acessorio = item.nome};
+    if (item.tipo === 'armadura') {
+      usuario.personalizacaoAvatar.armadura.tipo = item.nome;
+      usuario.personalizacaoAvatar.armadura.nivel = 1;
+      usuario.personalizacaoAvatar.armadura.desbloqueadaEm = new Date();
+    }
+    if (item.tipo === 'arma') {
+      usuario.personalizacaoAvatar.arma.tipo = item.nome;
+      usuario.personalizacaoAvatar.arma.nivel = 1;
+      usuario.personalizacaoAvatar.arma.desbloqueadaEm = new Date();
+    }
+    if (item.tipo === 'acessorio') {
+      usuario.personalizacaoAvatar.acessorio.tipo = item.nome;
+      usuario.personalizacaoAvatar.acessorio.nivel = 1;
+      usuario.personalizacaoAvatar.acessorio.desbloqueadaEm = new Date();
+    }
     await usuario.save();
     res.json({ sucesso: true, mensagem: `Item ${item.nome} comprado e equipado!`, experienciaRestante: usuario.experiencia, personalizacaoAvatar: usuario.personalizacaoAvatar });
   } catch (erro) {

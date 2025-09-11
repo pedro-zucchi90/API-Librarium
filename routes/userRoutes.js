@@ -30,4 +30,7 @@ router.get('/conquistas', async (req, res) => userController.conquistas(req, res
 // ===== PREFERÊNCIAS =====
 router.put('/preferencias', async (req, res) => userController.atualizarPreferencias(req, res));
 
+// ===== XP =====
+router.post('/adicionar-xp', async (req, res) => userController.adicionarXP(req, res));
+
 module.exports = router;
