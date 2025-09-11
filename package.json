@@ -9,7 +9,11 @@
     "test:avatar": "node test-avatar.js",
     "test:conquistas": "node -e \"require('./services/achievementService').criarConquistasPadrao('teste')\"",
     "test:export": "node -e \"console.log('Sistema de exportação configurado')\"",
-    "migrate:avatars": "node migrate-avatars.js"
+    "migrate:avatars": "node migrate-avatars.js",
+    "seed": "node seed-completa.js",
+    "seed:local": "cross-env API_URL=http://localhost:3000 node seed-completa.js",
+    "seed:railway": "cross-env API_URL=https://seu-projeto.railway.app node seed-completa.js",
+    "seed:auto": "node executar-seed.js"
   },
   "keywords": [
     "habits",
@@ -43,6 +47,7 @@
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
+    "cross-env": "^10.0.0",
     "nodemon": "^3.0.1"
   },
   "engines": {
