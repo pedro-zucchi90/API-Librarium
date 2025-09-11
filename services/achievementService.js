@@ -791,7 +791,7 @@ class AchievementService {
       const xpTotal = await Conquista.aggregate([
         {
           $match: {
-            idUsuario: mongoose.Types.ObjectId(usuarioId),
+            idUsuario: new mongoose.Types.ObjectId(usuarioId),
             desbloqueadaEm: { $exists: true }
           }
         },

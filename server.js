@@ -66,7 +66,7 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutos
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limite por IP
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // limite por IP (aumentado para testes)
   message: {
     erro: 'Muitas requisições',
     mensagem: ' Muitas requisições deste IP, tente novamente mais tarde'

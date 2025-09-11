@@ -13,7 +13,8 @@
     "seed": "node seed-completa.js",
     "seed:local": "cross-env API_URL=http://localhost:3000 node seed-completa.js",
     "seed:railway": "cross-env API_URL=https://seu-projeto.railway.app node seed-completa.js",
-    "seed:auto": "node executar-seed.js"
+    "seed:auto": "node executar-seed.js",
+    "migrate:avatars": "node migrar-avatars.js"
   },
   "keywords": [
     "habits",

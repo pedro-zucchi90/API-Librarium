@@ -18,9 +18,21 @@ exports.evoluirAvatar = async (req, res) => {
       novoAvatar = 'cacador';
       novoTitulo = 'Caçador';
     } else {
-      novoAvatar = 'aspirante';
+      novoAvatar = {
+        tipo: 'aspirante',
+        nivel: 1,
+        evolucao: 'inicial',
+        desbloqueadoEm: new Date()
+      };
       novoTitulo = 'Aspirante';
     }
+    
+    // Migrar avatar antigo se necessário
+    if (typeof usuario.avatar === 'string') {
+      usuario.migrarAvatarAntigo();
+    }
+    
+    // Atualizar avatar
     usuario.avatar = novoAvatar;
     usuario.titulo = novoTitulo;
     await usuario.save();
