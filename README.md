@@ -22,7 +22,7 @@ O Librarium é uma API RESTful completa que gamifica o processo de construção 
 - **Efeitos Visuais** - Auras, partículas e temas dinâmicos
 
 ### 🏆 **Sistema de Conquistas Inteligente**
-- **25+ Tipos de Conquistas** com verificação automática
+- **16 Conquistas** com verificação automática
 - **Sistema de Raridade** - Comum, Raro, Épico, Lendário
 - **Verificações Inteligentes** - Sequências, eficiência, consistência
 - **Conquistas Personalizadas** - Criadas pelos próprios usuários
@@ -406,7 +406,7 @@ curl -X POST https://seu-app.railway.app/api/habitos \
 - **Lendário**: 50 XP
 
 ### **Sistema de Conquistas**
-- **25+ Tipos de Conquistas** implementados
+- **16 Conquistas** implementadas
 - **Verificação Automática** a cada 5 minutos
 - **Sistema de Raridade** com recompensas diferenciadas
 - **Conquistas Personalizadas** criadas pelos usuários
