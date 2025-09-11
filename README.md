@@ -242,26 +242,6 @@ curl -X POST http://localhost:3000/api/auth/login \
   -d '{"email":"test@example.com","senha":"123456"}'
 ```
 
-## 🚧 Próximos Passos (Roadmap)
-
-### MVP Concluído ✅
-- [x] Sistema de autenticação
-- [x] CRUD de hábitos
-- [x] Sistema de XP/níveis
-- [x] Progresso e estatísticas básicas
-
-### Versão Intermediária 🔄
-- [x] Sistema de conquistas automáticas
-- [x] Avatar evolutivo visual
-- [x] Exportação de dados
-- [ ] Notificações (via webhook/email) - **Pausado**
-
-### Versão Avançada 🎯
-- [ ] Ranking multiplayer
-- [ ] Sistema de batalhas de hábitos
-- [ ] Integração com calendários
-- [ ] Modo offline-first
-
 ### 🆕 Funcionalidades Implementadas
 
 #### Sistema de Conquistas Avançado 🏆
