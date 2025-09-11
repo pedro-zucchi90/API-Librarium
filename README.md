@@ -660,7 +660,7 @@ Transforme sua jornada de desenvolvimento pessoal em uma aventura épica. Cada h
 
 ---
 
-**Desenvolvido com ❤️ e muito ☕ por [Seu Nome]**
+**Desenvolvido com ódio, Cursor IDE e muita cafeína por Pedro Zucchi**
 
 [![GitHub](https://img.shields.io/badge/GitHub-Profile-black.svg)](https://github.com/pedro-zucchi90)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-blue.svg)](https://www.linkedin.com/in/pedro-zucchi-52b50132b/)
