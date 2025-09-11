@@ -2,7 +2,8 @@ const Usuario = require('../models/User');
 const Habito = require('../models/Habit');
 const Progresso = require('../models/Progress');
 const Conquista = require('../models/Achievement');
-const fs = require('fs').promises;
+const fs = require('fs');
+const fsPromises = require('fs').promises;
 const path = require('path');
 const archiver = require('archiver');
 const xml2js = require('xml2js');
@@ -83,7 +84,7 @@ class DataExportService {
 
       // Criar arquivo temporário
       const tempDir = path.join(__dirname, '../temp');
-      await fs.mkdir(tempDir, { recursive: true });
+      await fsPromises.mkdir(tempDir, { recursive: true });
 
       const nomeArquivo = `librarium_${usuario.nomeUsuario}_${new Date().toISOString().split('T')[0]}.zip`;
       const caminhoArquivo = path.join(tempDir, nomeArquivo);

@@ -74,45 +74,35 @@ const testData = {
       descricao: 'Praticar meditação por 10 minutos',
       categoria: 'saude',
       dificuldade: 'facil',
-      frequencia: 'diaria',
-      meta: 1,
-      unidade: 'sessao'
+      frequencia: 'diario'
     },
     {
       titulo: 'Exercício Físico',
       descricao: 'Fazer 30 minutos de exercício',
-      categoria: 'fitness',
+      categoria: 'saude',
       dificuldade: 'medio',
-      frequencia: 'diaria', 
-      meta: 30,
-      unidade: 'minutos'
+      frequencia: 'diario'
     },
     {
       titulo: 'Leitura',
       descricao: 'Ler 20 páginas de um livro',
-      categoria: 'educacao',
+      categoria: 'estudo',
       dificuldade: 'facil',
-      frequencia: 'diaria',
-      meta: 20,
-      unidade: 'paginas'
+      frequencia: 'diario'
     },
     {
       titulo: 'Estudo de Programação',
       descricao: 'Estudar programação por 1 hora',
-      categoria: 'profissional',
+      categoria: 'trabalho',
       dificuldade: 'dificil',
-      frequencia: 'diaria',
-      meta: 60,
-      unidade: 'minutos'
+      frequencia: 'diario'
     },
     {
       titulo: 'Organizar Ambiente',
       descricao: 'Organizar o quarto/escritório',
-      categoria: 'produtividade',
+      categoria: 'pessoal',
       dificuldade: 'facil',
-      frequencia: 'semanal',
-      meta: 1,
-      unidade: 'vez'
+      frequencia: 'semanal'
     }
   ]
 };
@@ -334,7 +324,9 @@ async function testarUsuarios() {
   // Evoluir avatar
   try {
     const response = await axios.put(`${API_BASE}/usuarios/avatar/evoluir`, {
-      nivel: 5
+      tipo: 'cacador',
+      nivel: 2,
+      evolucao: 'inicial'
     }, { headers });
     logTest('Evoluir avatar', true);
   } catch (error) {
@@ -363,7 +355,7 @@ async function testarUsuarios() {
   // Atualizar preferências
   try {
     const response = await axios.put(`${API_BASE}/usuarios/preferencias`, {
-      tema: 'dark',
+      tema: 'escuro',
       notificacoes: true,
       idioma: 'pt-BR'
     }, { headers });

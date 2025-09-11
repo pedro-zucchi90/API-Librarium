@@ -777,12 +777,12 @@ class AchievementService {
           desbloqueadaEm: { $exists: true }
         }),
         Conquista.aggregate([
-          { $match: { idUsuario: mongoose.Types.ObjectId(usuarioId) } },
+          { $match: { idUsuario: new mongoose.Types.ObjectId(usuarioId) } },
           { $group: { _id: '$raridade', count: { $sum: 1 } } },
           { $sort: { count: -1 } }
         ]),
         Conquista.aggregate([
-          { $match: { idUsuario: mongoose.Types.ObjectId(usuarioId) } },
+          { $match: { idUsuario: new mongoose.Types.ObjectId(usuarioId) } },
           { $group: { _id: '$categoria', count: { $sum: 1 } } },
           { $sort: { count: -1 } }
         ])
