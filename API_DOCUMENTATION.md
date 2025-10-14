@@ -24,11 +24,6 @@ A API do Librarium é um sistema completo de gerenciamento de hábitos gamificad
 - Recompensas de XP
 - Conquistas personalizadas
 
-### ✅ **Notificações Push**
-- Configuração de subscriptions
-- Envio automático de notificações
-- Agendamento de lembretes
-- Múltiplos canais (app, push, email)
 
 ### ✅ **Funcionalidades Multiplayer**
 - Sistema de batalhas entre usuários
@@ -101,18 +96,6 @@ http://localhost:3000/api
 | DELETE | `/:id` | Deletar notificação | ✅ |
 | DELETE | `/limpar-antigas` | Limpar notificações antigas | ✅ |
 | GET | `/estatisticas` | Estatísticas de notificações | ✅ |
-
-#### **Notificações Push** (`/notificacoes/push`)
-
-| Método | Endpoint | Descrição | Autenticação |
-|--------|----------|-----------|--------------|
-| POST | `/subscription` | Configurar subscription push | ✅ |
-| DELETE | `/subscription` | Remover subscription push | ✅ |
-| POST | `/teste` | Enviar notificação de teste | ✅ |
-| GET | `/chave-publica` | Obter chave pública VAPID | ✅ |
-| GET | `/estatisticas` | Estatísticas push | ✅ |
-
-#### **Notificações Agendadas** (`/notificacoes`)
 
 | Método | Endpoint | Descrição | Autenticação |
 |--------|----------|-----------|--------------|
@@ -405,11 +388,6 @@ NODE_ENV=development
 GOOGLE_CLIENT_ID=seu_google_client_id_aqui
 GOOGLE_CLIENT_SECRET=seu_google_client_secret_aqui
 
-# Notificações Push
-# Se não fornecidas, as chaves VAPID serão geradas automaticamente
-PUSH_PUBLIC_KEY=sua_chave_publica_vapid_aqui
-PUSH_PRIVATE_KEY=sua_chave_privada_vapid_aqui
-
 # Email (opcional)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -429,7 +407,6 @@ LOG_FILE=logs/app.log
 **⚠️ IMPORTANTE sobre Google APIs:**
 - Para as integrações com Google Calendar e Google Fit funcionarem, você **PRECISA** de ambos `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`
 - Se você só tem o Client ID, essas funcionalidades não funcionarão
-- As notificações push funcionarão independentemente das Google APIs
 
 ## 📈 **Monitoramento**
 

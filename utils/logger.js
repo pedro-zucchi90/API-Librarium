@@ -135,10 +135,6 @@ logger.integration = (message, meta = {}) => {
   logger.info(`🔗 ${message}`, { ...meta, type: 'integration' });
 };
 
-logger.notification = (message, meta = {}) => {
-  logger.info(`🔔 ${message}`, { ...meta, type: 'notification' });
-};
-
 logger.security = (message, meta = {}) => {
   logger.warn(`🛡️ ${message}`, { ...meta, type: 'security' });
 };
@@ -147,33 +143,225 @@ logger.performance = (message, meta = {}) => {
   logger.info(`⚡ ${message}`, { ...meta, type: 'performance' });
 };
 
-// Middleware para Express
-logger.middleware = (req, res, next) => {
-  const start = Date.now();
+// ===== NOVOS MÉTODOS DE DEBUG =====
 
-  // Log da requisição
-  logger.http(`${req.method} ${req.originalUrl}`, {
+logger.debug = (message, meta = {}) => {
+  logger.debug(`🔍 ${message}`, { ...meta, type: 'debug' });
+};
+
+logger.request = (message, meta = {}) => {
+  logger.info(`📥 ${message}`, { ...meta, type: 'request' });
+};
+
+logger.response = (message, meta = {}) => {
+  logger.info(`📤 ${message}`, { ...meta, type: 'response' });
+};
+
+logger.error = (message, meta = {}) => {
+  logger.error(`❌ ${message}`, { ...meta, type: 'error' });
+};
+
+logger.validation = (message, meta = {}) => {
+  logger.warn(`✅ ${message}`, { ...meta, type: 'validation' });
+};
+
+logger.business = (message, meta = {}) => {
+  logger.info(`💼 ${message}`, { ...meta, type: 'business' });
+};
+
+logger.external = (message, meta = {}) => {
+  logger.info(`🌐 ${message}`, { ...meta, type: 'external' });
+};
+
+logger.cache = (message, meta = {}) => {
+  logger.info(`💾 ${message}`, { ...meta, type: 'cache' });
+};
+
+logger.middleware = (message, meta = {}) => {
+  logger.info(`🔧 ${message}`, { ...meta, type: 'middleware' });
+};
+
+// Middleware para Express - Versão Aprimorada
+logger.requestMiddleware = (req, res, next) => {
+  const start = Date.now();
+  const requestId = Math.random().toString(36).substring(7);
+  
+  // Adicionar ID único à requisição
+  req.requestId = requestId;
+
+  // Log detalhado da requisição
+  const requestData = {
+    requestId,
+    method: req.method,
+    url: req.originalUrl,
     ip: req.ip,
     userAgent: req.get('User-Agent'),
     userId: req.user?._id,
+    headers: {
+      'content-type': req.get('Content-Type'),
+      'authorization': req.get('Authorization') ? 'Bearer ***' : 'none',
+      'accept': req.get('Accept')
+    },
+    query: req.query,
+    params: req.params,
+    body: req.method !== 'GET' ? sanitizeBody(req.body) : null,
     timestamp: new Date().toISOString()
-  });
+  };
+
+  logger.request(`Incoming Request`, requestData);
 
   // Interceptar resposta
   res.on('finish', () => {
     const duration = Date.now() - start;
-    const level = res.statusCode >= 400 ? 'warn' : 'http';
-
-    logger.log(level, `${req.method} ${req.originalUrl} - ${res.statusCode}`, {
+    const level = res.statusCode >= 400 ? 'warn' : 'info';
+    
+    const responseData = {
+      requestId,
+      method: req.method,
+      url: req.originalUrl,
       statusCode: res.statusCode,
       duration: `${duration}ms`,
       ip: req.ip,
       userId: req.user?._id,
+      responseSize: res.get('Content-Length') || 'unknown',
       timestamp: new Date().toISOString()
-    });
+    };
+
+    // Log de performance se demorar muito
+    if (duration > 1000) {
+      logger.performance(`Slow Request Detected`, {
+        ...responseData,
+        performance: 'slow'
+      });
+    }
+
+    logger.response(`Request Completed`, responseData);
   });
 
   next();
+};
+
+// Função para sanitizar dados sensíveis do body
+function sanitizeBody(body) {
+  if (!body || typeof body !== 'object') return body;
+  
+  const sanitized = { ...body };
+  const sensitiveFields = ['password', 'senha', 'token', 'secret', 'key', 'authorization'];
+  
+  for (const field of sensitiveFields) {
+    if (sanitized[field]) {
+      sanitized[field] = '***';
+    }
+  }
+  
+  return sanitized;
+}
+
+// Middleware de tratamento de erros aprimorado
+logger.errorMiddleware = (err, req, res, next) => {
+  const requestId = req.requestId || 'unknown';
+  
+  // Log detalhado do erro
+  const errorData = {
+    requestId,
+    error: {
+      name: err.name,
+      message: err.message,
+      stack: err.stack,
+      statusCode: err.statusCode || 500,
+      code: err.code,
+      details: err.details
+    },
+    request: {
+      method: req.method,
+      url: req.originalUrl,
+      ip: req.ip,
+      userId: req.user?._id,
+      userAgent: req.get('User-Agent')
+    },
+    timestamp: new Date().toISOString()
+  };
+
+  // Log baseado no tipo de erro
+  if (err.name === 'ValidationError') {
+    logger.validation(`Validation Error`, errorData);
+  } else if (err.name === 'CastError') {
+    logger.validation(`Cast Error`, errorData);
+  } else if (err.name === 'MongoError' || err.name === 'MongooseError') {
+    logger.database(`Database Error`, errorData);
+  } else if (err.statusCode === 401) {
+    logger.auth(`Authentication Error`, errorData);
+  } else if (err.statusCode === 403) {
+    logger.security(`Authorization Error`, errorData);
+  } else if (err.statusCode >= 400 && err.statusCode < 500) {
+    logger.validation(`Client Error`, errorData);
+  } else {
+    logger.error(`Server Error`, errorData);
+  }
+
+  // Resposta padronizada
+  const statusCode = err.statusCode || 500;
+  const response = {
+    sucesso: false,
+    erro: err.name || 'Erro interno do servidor',
+    mensagem: err.message || 'Ocorreu um erro inesperado',
+    requestId,
+    timestamp: new Date().toISOString()
+  };
+
+  // Adicionar detalhes em desenvolvimento
+  if (process.env.NODE_ENV === 'development') {
+    response.stack = err.stack;
+    response.details = err.details;
+  }
+
+  res.status(statusCode).json(response);
+};
+
+// Função para log de operações de banco de dados
+logger.dbOperation = (operation, collection, data = {}) => {
+  logger.database(`Database Operation: ${operation}`, {
+    collection,
+    operation,
+    ...data,
+    timestamp: new Date().toISOString()
+  });
+};
+
+// Função para log de validações
+logger.validationResult = (isValid, field, value, rule) => {
+  const level = isValid ? 'debug' : 'warn';
+  logger[level](`Validation ${isValid ? 'Success' : 'Failed'}`, {
+    field,
+    value: typeof value === 'string' && value.length > 100 ? value.substring(0, 100) + '...' : value,
+    rule,
+    isValid,
+    timestamp: new Date().toISOString()
+  });
+};
+
+// Função para log de cache
+logger.cacheOperation = (operation, key, hit = null, ttl = null) => {
+  logger.cache(`Cache ${operation}`, {
+    key,
+    hit,
+    ttl,
+    operation,
+    timestamp: new Date().toISOString()
+  });
+};
+
+// Função para log de integrações externas
+logger.externalApi = (service, operation, status, duration, data = {}) => {
+  const level = status >= 400 ? 'error' : 'info';
+  logger.external(`${service} API ${operation}`, {
+    service,
+    operation,
+    status,
+    duration: `${duration}ms`,
+    ...data,
+    timestamp: new Date().toISOString()
+  });
 };
 
 // Função para limpar logs antigos

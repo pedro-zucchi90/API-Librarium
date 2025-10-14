@@ -89,7 +89,12 @@ app.use('/api/', limiter);
 // Compressão gzip
 app.use(compression());
 
-// Logging
+// ===== LOGGING APRIMORADO =====
+
+// Middleware de logging de requisições detalhado
+app.use(logger.requestMiddleware);
+
+// Logging adicional com Morgan (apenas em desenvolvimento)
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 } else {
@@ -254,9 +259,12 @@ process.on('SIGINT', async () => {
 
 iniciarServidor();
 
-// ===== MIDDLEWARES DE ERRO =====
+// ===== MIDDLEWARES DE ERRO APRIMORADOS =====
 
-// Middleware de erro global
+// Middleware de erro global aprimorado
+app.use(logger.errorMiddleware);
+
+// Middleware de erro original (como fallback)
 app.use(errorHandler);
 
 // Middleware para rotas não encontradas (deve ser o último)

@@ -1,18 +1,63 @@
 const Habito = require('../models/Habit');
 const Progresso = require('../models/Progress');
+const logger = require('../utils/logger');
 
 exports.listar = async (req, res) => {
+  const requestId = req.requestId;
+  const startTime = Date.now();
+  
   try {
+    logger.debug('Iniciando listagem de hábitos', {
+      requestId,
+      userId: req.usuario._id,
+      query: req.query
+    });
+
     const { ativo, categoria, dificuldade } = req.query;
     const filtros = { idUsuario: req.usuario._id };
-    if (ativo !== undefined) {filtros.ativo = ativo === 'true'};
-    if (categoria) {filtros.categoria = categoria};
-    if (dificuldade) {filtros.dificuldade = dificuldade};
+    
+    // Log de validação dos filtros
+    if (ativo !== undefined) {
+      filtros.ativo = ativo === 'true';
+      logger.validationResult(true, 'ativo', ativo, 'boolean conversion');
+    }
+    if (categoria) {
+      filtros.categoria = categoria;
+      logger.validationResult(true, 'categoria', categoria, 'string validation');
+    }
+    if (dificuldade) {
+      filtros.dificuldade = dificuldade;
+      logger.validationResult(true, 'dificuldade', dificuldade, 'enum validation');
+    }
+
+    logger.dbOperation('find', 'habitos', { filtros });
     const habitos = await Habito.find(filtros).sort({ createdAt: -1 });
+    
+    const duration = Date.now() - startTime;
+    logger.habit('Hábitos listados com sucesso', {
+      requestId,
+      userId: req.usuario._id,
+      total: habitos.length,
+      filtros,
+      duration: `${duration}ms`
+    });
+
     res.json({ sucesso: true, mensagem: `🗡️ ${habitos.length} hábitos encontrados`, habitos });
   } catch (erro) {
-    console.error('Erro ao listar hábitos:', erro);
-    res.status(500).json({ erro: 'Erro interno do servidor', mensagem: '💀 Não foi possível carregar os hábitos...' });
+    const duration = Date.now() - startTime;
+    logger.error('Erro ao listar hábitos', {
+      requestId,
+      userId: req.usuario._id,
+      error: erro.message,
+      stack: erro.stack,
+      duration: `${duration}ms`
+    });
+    
+    res.status(500).json({ 
+      erro: 'Erro interno do servidor', 
+      mensagem: '💀 Não foi possível carregar os hábitos...',
+      requestId
+    });
   }
 };
 
