@@ -7,7 +7,7 @@ exports.listar = async (req, res) => {
   const startTime = Date.now();
   
   try {
-    logger.debug('Iniciando listagem de hábitos', {
+    logger.debugLog('Iniciando listagem de hábitos', {
       requestId,
       userId: req.usuario._id,
       query: req.query
@@ -45,7 +45,7 @@ exports.listar = async (req, res) => {
     res.json({ sucesso: true, mensagem: `🗡️ ${habitos.length} hábitos encontrados`, habitos });
   } catch (erro) {
     const duration = Date.now() - startTime;
-    logger.error('Erro ao listar hábitos', {
+    logger.errorLog('Erro ao listar hábitos', {
       requestId,
       userId: req.usuario._id,
       error: erro.message,
@@ -138,18 +138,75 @@ exports.deletar = async (req, res) => {
 };
 
 exports.concluir = async (req, res) => {
+  const requestId = req.requestId;
+  const startTime = Date.now();
+  
   try {
+    logger.debugLog('Iniciando conclusão de hábito', {
+      requestId,
+      userId: req.usuario._id,
+      habitId: req.params.id,
+      body: req.body
+    });
+
     const { observacoes, data } = req.body;
+    
+    // Validação e processamento da data
     const dataProgresso = data ? new Date(data) : new Date();
     dataProgresso.setHours(0, 0, 0, 0);
+    
+    logger.validationResult(true, 'data', dataProgresso.toISOString(), 'date processing');
+    
+    // Buscar hábito
+    logger.dbOperation('findOne', 'habitos', { 
+      _id: req.params.id, 
+      idUsuario: req.usuario._id 
+    });
     const habito = await Habito.findOne({ _id: req.params.id, idUsuario: req.usuario._id });
+    
     if (!habito) {
-      return res.status(404).json({ erro: 'Hábito não encontrado', mensagem: '🌑 Este hábito não existe no seu arsenal' });
+      logger.validation('Hábito não encontrado', {
+        requestId,
+        userId: req.usuario._id,
+        habitId: req.params.id
+      });
+      return res.status(404).json({ 
+        erro: 'Hábito não encontrado', 
+        mensagem: '🌑 Este hábito não existe no seu arsenal',
+        requestId
+      });
     }
+
+    logger.habit('Hábito encontrado', {
+      requestId,
+      habitId: habito._id,
+      titulo: habito.titulo,
+      dificuldade: habito.dificuldade,
+      recompensaXP: habito.recompensaExperiencia
+    });
+
+    // Verificar se já existe progresso para a data
+    logger.dbOperation('findOne', 'progressos', { 
+      idHabito: habito._id, 
+      data: dataProgresso 
+    });
     const progressoExistente = await Progresso.findOne({ idHabito: habito._id, data: dataProgresso });
+    
     if (progressoExistente) {
-      return res.status(400).json({ erro: 'Progresso já registrado', mensagem: '⚔️ Você já completou este hábito hoje!' });
+      logger.validation('Progresso já registrado', {
+        requestId,
+        userId: req.usuario._id,
+        habitId: habito._id,
+        data: dataProgresso.toISOString()
+      });
+      return res.status(400).json({ 
+        erro: 'Progresso já registrado', 
+        mensagem: '⚔️ Você já completou este hábito hoje!',
+        requestId
+      });
     }
+
+    // Criar novo progresso
     const novoProgresso = new Progresso({
       idHabito: habito._id,
       idUsuario: req.usuario._id,
@@ -159,22 +216,74 @@ exports.concluir = async (req, res) => {
       experienciaGanha: habito.recompensaExperiencia,
       dificuldade: habito.dificuldade
     });
+
+    logger.dbOperation('save', 'progressos', {
+      habitId: habito._id,
+      userId: req.usuario._id,
+      data: dataProgresso.toISOString(),
+      experienciaGanha: habito.recompensaExperiencia
+    });
     await novoProgresso.save();
+
+    // Atualizar estatísticas do hábito
     habito.estatisticas.totalConclusoes += 1;
     habito.atualizarSequencia(true);
     habito.atualizarEstatisticas();
+    
+    logger.dbOperation('save', 'habitos', {
+      habitId: habito._id,
+      totalConclusoes: habito.estatisticas.totalConclusoes,
+      sequenciaAtual: habito.sequencia.atual,
+      maiorSequencia: habito.sequencia.maiorSequencia
+    });
     await habito.save();
+
+    // Adicionar experiência ao usuário
+    const nivelAnterior = req.usuario.nivel;
     await req.usuario.adicionarExperiencia(habito.recompensaExperiencia);
+    
+    logger.business('Hábito concluído com sucesso', {
+      requestId,
+      userId: req.usuario._id,
+      habitId: habito._id,
+      experienciaGanha: habito.recompensaExperiencia,
+      nivelAnterior,
+      nivelNovo: req.usuario.nivel,
+      totalConclusoes: habito.estatisticas.totalConclusoes,
+      sequenciaAtual: habito.sequencia.atual
+    });
+
+    const duration = Date.now() - startTime;
+    logger.performance('Conclusão de hábito processada', {
+      requestId,
+      duration: `${duration}ms`,
+      operacoes: ['find_habito', 'check_progresso', 'create_progresso', 'update_habito', 'update_user']
+    });
+
     res.json({
       sucesso: true,
       mensagem: `🎮 +${habito.recompensaExperiencia} XP! Hábito concluído com sucesso!`,
       progresso: novoProgresso,
       experienciaGanha: habito.recompensaExperiencia,
-      novoNivel: req.usuario.nivel
+      novoNivel: req.usuario.nivel,
+      requestId
     });
   } catch (erro) {
-    console.error('Erro ao concluir hábito:', erro);
-    res.status(500).json({ erro: 'Erro interno do servidor', mensagem: '💀 Não foi possível registrar a conclusão...' });
+    const duration = Date.now() - startTime;
+    logger.errorLog('Erro ao concluir hábito', {
+      requestId,
+      userId: req.usuario._id,
+      habitId: req.params.id,
+      error: erro.message,
+      stack: erro.stack,
+      duration: `${duration}ms`
+    });
+    
+    res.status(500).json({ 
+      erro: 'Erro interno do servidor', 
+      mensagem: '💀 Não foi possível registrar a conclusão...',
+      requestId
+    });
   }
 };
 

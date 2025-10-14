@@ -29,6 +29,15 @@ const AvatarService = require('./services/avatarService');
 
 // Importar middlewares
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const { 
+  validationLogger, 
+  performanceLogger, 
+  databaseLogger, 
+  authLogger, 
+  rateLimitLogger, 
+  securityLogger, 
+  validationErrorLogger 
+} = require('./middleware/debugMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -91,8 +100,18 @@ app.use(compression());
 
 // ===== LOGGING APRIMORADO =====
 
+// ===== MIDDLEWARES DE DEBUG E LOGGING =====
+
 // Middleware de logging de requisições detalhado
 app.use(logger.requestMiddleware);
+
+// Middlewares de debug adicionais
+app.use(validationLogger);
+app.use(databaseLogger);
+app.use(authLogger);
+app.use(rateLimitLogger);
+app.use(securityLogger);
+app.use(validationErrorLogger);
 
 // Logging adicional com Morgan (apenas em desenvolvimento)
 if (process.env.NODE_ENV === 'development') {

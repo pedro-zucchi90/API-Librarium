@@ -145,7 +145,7 @@ logger.performance = (message, meta = {}) => {
 
 // ===== NOVOS MÉTODOS DE DEBUG =====
 
-logger.debug = (message, meta = {}) => {
+logger.debugLog = (message, meta = {}) => {
   logger.debug(`🔍 ${message}`, { ...meta, type: 'debug' });
 };
 
@@ -157,7 +157,7 @@ logger.response = (message, meta = {}) => {
   logger.info(`📤 ${message}`, { ...meta, type: 'response' });
 };
 
-logger.error = (message, meta = {}) => {
+logger.errorLog = (message, meta = {}) => {
   logger.error(`❌ ${message}`, { ...meta, type: 'error' });
 };
 

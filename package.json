@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "test:avatar": "node test-avatar.js",
     "test:google": "node test-google-oauth.js",
+    "test:debug": "node test-debug-system.js",
     "test:conquistas": "node -e \"require('./services/achievementService').criarConquistasPadrao('teste')\"",
     "test:export": "node -e \"console.log('Sistema de exportação configurado')\"",
     "migrate:avatars": "node migrate-avatars.js",

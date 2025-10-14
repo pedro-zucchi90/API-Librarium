@@ -1,4 +1,5 @@
 const Usuario = require('../models/User');
+const logger = require('../utils/logger');
 
 const GOOGLE_OAUTH_CONFIG = {
   clientId: process.env.GOOGLE_CLIENT_ID,
@@ -13,13 +14,45 @@ class GoogleCalendarAPI {
     this.baseUrl = 'https://www.googleapis.com/calendar/v3';
   }
   async criarEvento (evento) {
-    const response = await fetch(`${this.baseUrl}/calendars/primary/events`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${this.accessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(evento)
+    const startTime = Date.now();
+    
+    logger.externalApi('Google Calendar', 'createEvent', 'starting', 0, {
+      evento: { summary: evento.summary, start: evento.start }
     });
-    if (!response.ok) {throw new Error(`Erro na API do Google Calendar: ${response.statusText}`)};
-    return await response.json();
+
+    try {
+      const response = await fetch(`${this.baseUrl}/calendars/primary/events`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${this.accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(evento)
+      });
+      
+      const duration = Date.now() - startTime;
+      
+      if (!response.ok) {
+        logger.externalApi('Google Calendar', 'createEvent', response.status, duration, {
+          error: response.statusText,
+          evento: { summary: evento.summary }
+        });
+        throw new Error(`Erro na API do Google Calendar: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      logger.externalApi('Google Calendar', 'createEvent', response.status, duration, {
+        eventoId: result.id,
+        summary: result.summary
+      });
+      
+      return result;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      logger.externalApi('Google Calendar', 'createEvent', 'error', duration, {
+        error: error.message,
+        evento: { summary: evento.summary }
+      });
+      throw error;
+    }
   }
   async listarEventos (dataInicio, dataFim, maxResultados = 50) {
     const params = new URLSearchParams({
