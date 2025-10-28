@@ -124,6 +124,9 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Favicon silencioso (evita 404 e logs indesejados)
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // ===== ROTAS =====
 
 // Health check simplificado

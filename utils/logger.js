@@ -203,6 +203,12 @@ logger.requestMiddleware = (req, res, next) => {
   // Adicionar ID único à requisição
   req.requestId = requestId;
 
+  // Ignorar completamente favicon.ico (sem log e com resposta silenciosa)
+  if (req.originalUrl === '/favicon.ico') {
+    res.status(204).end();
+    return;
+  }
+
   // Log detalhado da requisição
   const requestData = {
     requestId,
