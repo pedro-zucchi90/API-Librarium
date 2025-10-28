@@ -20,9 +20,11 @@ const API_BASE = `${BASE_URL}/api`;
 const colors = {
   reset: '\x1b[0m',
   bright: '\x1b[1m',
+  dim: '\x1b[2m',
   red: '\x1b[31m',
   green: '\x1b[32m',
   yellow: '\x1b[33m',
+  magenta: '\x1b[35m',
   cyan: '\x1b[36m'
 };
 
@@ -31,15 +33,17 @@ function log(message, color = 'reset') {
 }
 
 function logSection(title) {
-  log(`\n${'='.repeat(60)}`, 'cyan');
-  log(`🗡️  ${title}`, 'bright');
-  log(`${'='.repeat(60)}`, 'cyan');
+  const border = '━'.repeat(60);
+  log(`\n${colors.dim}${border}${colors.reset}`, 'reset');
+  log(`${colors.magenta}☽${colors.reset}  ${title}`, 'bright');
+  log(`${colors.dim}${border}${colors.reset}`, 'reset');
 }
 
 function logTest(testName, success, details = '') {
-  const status = success ? '✅' : '❌';
+  const status = success ? '✔' : '✖';
+  const icon = success ? '✧' : '☠️';
   const color = success ? 'green' : 'red';
-  log(`${status} ${testName}${details ? ` - ${details}` : ''}`, color);
+  log(`${icon} ${status} ${testName}${details ? ` - ${details}` : ''}`, color);
 }
 
 // Rate limiter: 1 req a cada 500ms
@@ -189,8 +193,8 @@ async function testarUsuarios() {
 
 // ===== FUNÇÃO PRINCIPAL =====
 async function executarSeedCompleta() {
-  log('🗡️ LIBRARIUM - SEED COMPLETA DE TESTES', 'bright');
-  log(`Testando todas as rotas da API...`, 'yellow');
+  log('☽ LIBRARIUM - SEED COMPLETA DE TESTES ☽', 'bright');
+  log(`Invocando testes pelas catacumbas da API...`, 'yellow');
   log(`URL Base: ${API_BASE}`, 'yellow');
 
   if (!(await testarConexao())) return;

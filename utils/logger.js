@@ -36,12 +36,26 @@ const logFormat = winston.format.combine(
   })
 );
 
-// Formato para console (mais legível)
+// Formato para console (tema dark fantasy)
 const consoleFormat = winston.format.combine(
   winston.format.colorize({ all: true }),
   winston.format.timestamp({ format: 'HH:mm:ss' }),
   winston.format.printf(({ timestamp, level, message, ...meta }) => {
-    let log = `[${timestamp}] ${level}: ${message}`;
+    const levelIcons = {
+      error: '☠️',
+      warn: '⚠️',
+      info: '☽',
+      http: '🜲',
+      verbose: '✧',
+      debug: '🔮'
+    };
+
+    const glyphLeft = '⟬';
+    const glyphRight = '⟭';
+    const icon = levelIcons[level] || '✦';
+
+    let head = `${glyphLeft} ${timestamp} ${glyphRight}`;
+    let log = `${head} ${icon} ${level}: ${message}`;
 
     if (meta.error && meta.stack) {
       log += `\n${meta.stack}`;
