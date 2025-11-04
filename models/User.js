@@ -63,6 +63,11 @@ const esquemaUsuario = new mongoose.Schema({
       tipo: { type: String, default: 'nenhuma' },
       quantidade: { type: Number, default: 0 },
       desbloqueadaEm: { type: Date, default: Date.now }
+    },
+    // Campo para armazenar dados customizados (head, tema, bodyColor, etc.)
+    custom: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
     }
   },
   titulo: {

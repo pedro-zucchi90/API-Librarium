@@ -46,15 +46,113 @@ exports.evoluirAvatar = async (req, res) => {
 exports.customizarAvatar = async (req, res) => {
   try {
     const {usuario} = req;
-    const { arma, armadura, acessorio } = req.body;
-    if (arma) {usuario.personalizacaoAvatar.arma = arma};
-    if (armadura) {usuario.personalizacaoAvatar.armadura = armadura};
-    if (acessorio) {usuario.personalizacaoAvatar.acessorio = acessorio};
-    await usuario.save();
-    res.json({ sucesso: true, mensagem: 'Visual do avatar atualizado!', personalizacaoAvatar: usuario.personalizacaoAvatar });
+    const { personalizacaoAvatar, arma, armadura, acessorio } = req.body;
+
+    // Aceitar tanto o formato novo (personalizacaoAvatar) quanto o antigo (arma, armadura, acessorio)
+    if (personalizacaoAvatar && typeof personalizacaoAvatar === 'object') {
+      // Formato novo: personalizacaoAvatar como objeto
+      // Fazer merge seguro dos dados
+      if (personalizacaoAvatar.tema) {
+        // Tema não está no schema, mas pode ser usado para outras coisas
+        // Por enquanto, apenas armazenamos no personalizacaoAvatar se necessário
+      }
+      
+      // Atualizar campos do personalizacaoAvatar de forma segura
+      if (personalizacaoAvatar.head) {
+        // Head não está no schema padrão, mas podemos armazenar como parte do acessorio ou criar um campo customizado
+        // Por enquanto, vamos armazenar em um campo que já existe
+      }
+      
+      // Atualizar bodyColor se fornecido
+      if (personalizacaoAvatar.bodyColor) {
+        // BodyColor pode ser usado para personalização visual
+      }
+      
+      // Fazer merge seguro: apenas atualizar campos que existem no schema
+      if (personalizacaoAvatar.arma && typeof personalizacaoAvatar.arma === 'object') {
+        if (personalizacaoAvatar.arma.tipo) {
+          usuario.personalizacaoAvatar.arma.tipo = personalizacaoAvatar.arma.tipo;
+        }
+        if (personalizacaoAvatar.arma.nivel) {
+          usuario.personalizacaoAvatar.arma.nivel = personalizacaoAvatar.arma.nivel;
+        }
+      }
+      
+      if (personalizacaoAvatar.armadura && typeof personalizacaoAvatar.armadura === 'object') {
+        if (personalizacaoAvatar.armadura.tipo) {
+          usuario.personalizacaoAvatar.armadura.tipo = personalizacaoAvatar.armadura.tipo;
+        }
+        if (personalizacaoAvatar.armadura.nivel) {
+          usuario.personalizacaoAvatar.armadura.nivel = personalizacaoAvatar.armadura.nivel;
+        }
+      }
+      
+      if (personalizacaoAvatar.acessorio && typeof personalizacaoAvatar.acessorio === 'object') {
+        if (personalizacaoAvatar.acessorio.tipo) {
+          usuario.personalizacaoAvatar.acessorio.tipo = personalizacaoAvatar.acessorio.tipo;
+        }
+        if (personalizacaoAvatar.acessorio.nivel) {
+          usuario.personalizacaoAvatar.acessorio.nivel = personalizacaoAvatar.acessorio.nivel;
+        }
+      }
+      
+      // Armazenar campos customizados (head, tema, bodyColor) no campo custom
+      if (!usuario.personalizacaoAvatar.custom || typeof usuario.personalizacaoAvatar.custom !== 'object') {
+        usuario.personalizacaoAvatar.custom = {};
+      }
+      if (personalizacaoAvatar.head) {
+        usuario.personalizacaoAvatar.custom.head = personalizacaoAvatar.head;
+      }
+      if (personalizacaoAvatar.tema) {
+        usuario.personalizacaoAvatar.custom.tema = personalizacaoAvatar.tema;
+      }
+      if (personalizacaoAvatar.bodyColor) {
+        usuario.personalizacaoAvatar.custom.bodyColor = personalizacaoAvatar.bodyColor;
+      }
+    } else {
+      // Formato antigo: arma, armadura, acessorio diretos
+      if (arma && typeof arma === 'object') {
+        if (arma.tipo) usuario.personalizacaoAvatar.arma.tipo = arma.tipo;
+        if (arma.nivel) usuario.personalizacaoAvatar.arma.nivel = arma.nivel;
+      }
+      if (armadura && typeof armadura === 'object') {
+        if (armadura.tipo) usuario.personalizacaoAvatar.armadura.tipo = armadura.tipo;
+        if (armadura.nivel) usuario.personalizacaoAvatar.armadura.nivel = armadura.nivel;
+      }
+      if (acessorio && typeof acessorio === 'object') {
+        if (acessorio.tipo) usuario.personalizacaoAvatar.acessorio.tipo = acessorio.tipo;
+        if (acessorio.nivel) usuario.personalizacaoAvatar.acessorio.nivel = acessorio.nivel;
+      }
+    }
+
+    // Marcar como modificado para garantir que o Mongoose salve
+    usuario.markModified('personalizacaoAvatar');
+    
+    // Salvar com validação
+    await usuario.save({ validateBeforeSave: true });
+    
+    // Retornar resposta sempre, mesmo em caso de sucesso parcial
+    res.json({ 
+      sucesso: true, 
+      mensagem: 'Visual do avatar atualizado!', 
+      personalizacaoAvatar: usuario.personalizacaoAvatar 
+    });
   } catch (erro) {
     console.error('Erro ao customizar avatar:', erro);
-    res.status(500).json({ erro: 'Erro interno do servidor', mensagem: '💀 Não foi possível customizar o avatar...' });
+    
+    // Garantir que sempre retornamos uma resposta, mesmo em caso de erro
+    // Isso evita que o front-end perca a conexão
+    const statusCode = erro.name === 'ValidationError' ? 400 : 500;
+    const mensagem = erro.name === 'ValidationError' 
+      ? 'Dados inválidos fornecidos para personalização do avatar'
+      : '💀 Não foi possível customizar o avatar...';
+    
+    res.status(statusCode).json({ 
+      sucesso: false,
+      erro: 'Erro ao customizar avatar', 
+      mensagem: mensagem,
+      detalhes: process.env.NODE_ENV === 'development' ? erro.message : undefined
+    });
   }
 };
 
