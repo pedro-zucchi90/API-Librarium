@@ -110,6 +110,7 @@ class AchievementService {
     try {
       const dataInicio = this.calcularDataInicio(periodo);
 
+      // Buscar todos os progressos do período
       const progressos = await Progresso.find({
         idUsuario: usuario._id,
         data: { $gte: dataInicio },
@@ -118,18 +119,36 @@ class AchievementService {
 
       if (progressos.length === 0) {return false};
 
-      let sequenciaAtual = 1;
+      // Agrupar por dia único (data sem hora)
+      const diasComProgresso = new Set();
+      progressos.forEach(progresso => {
+        const dataProgresso = new Date(progresso.data);
+        dataProgresso.setHours(0, 0, 0, 0);
+        diasComProgresso.add(dataProgresso.getTime());
+      });
+      
+      // Converter para array ordenado
+      const diasOrdenados = Array.from(diasComProgresso)
+        .map(timestamp => new Date(timestamp))
+        .sort((a, b) => a - b);
+      
+      if (diasOrdenados.length === 0) {return false};
+      
+      // Calcular maior sequência de dias consecutivos
       let maiorSequencia = 1;
-
-      for (let i = 1; i < progressos.length; i++) {
-        const dataAtual = progressos[i].data;
-        const dataAnterior = progressos[i - 1].data;
+      let sequenciaAtual = 1;
+      
+      for (let i = 1; i < diasOrdenados.length; i++) {
+        const dataAtual = diasOrdenados[i];
+        const dataAnterior = diasOrdenados[i - 1];
         const diffDias = Math.floor((dataAtual - dataAnterior) / (1000 * 60 * 60 * 24));
-
+        
         if (diffDias === 1) {
+          // Dia consecutivo
           sequenciaAtual++;
           maiorSequencia = Math.max(maiorSequencia, sequenciaAtual);
         } else {
+          // Quebra na sequência
           sequenciaAtual = 1;
         }
       }

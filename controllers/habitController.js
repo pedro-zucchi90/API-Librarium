@@ -1,6 +1,98 @@
 const Habito = require('../models/Habit');
 const Progresso = require('../models/Progress');
+const Usuario = require('../models/User');
 const logger = require('../utils/logger');
+
+// Função para atualizar sequência geral do usuário
+async function atualizarSequenciaGeralUsuario(usuarioId) {
+  try {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
+    // Buscar todos os progressos do usuário ordenados por data
+    const progressos = await Progresso.find({
+      idUsuario: usuarioId,
+      status: 'concluido'
+    }).sort({ data: 1 });
+    
+    if (progressos.length === 0) {
+      // Sem progressos - sequência é 0
+      await Usuario.findByIdAndUpdate(usuarioId, {
+        'sequencia.atual': 0,
+        'sequencia.maiorSequencia': 0
+      });
+      return;
+    }
+    
+    // Agrupar progressos por dia (data única)
+    const diasComProgresso = new Set();
+    progressos.forEach(progresso => {
+      const dataStr = progresso.data.toISOString().split('T')[0];
+      diasComProgresso.add(dataStr);
+    });
+    
+    // Converter para array de datas e ordenar
+    const diasOrdenados = Array.from(diasComProgresso)
+      .map(dataStr => new Date(dataStr))
+      .sort((a, b) => a - b);
+    
+    // Calcular maior sequência de todos os tempos primeiro
+    let maiorSequencia = 1;
+    let sequenciaTemporaria = 1;
+    
+    for (let i = 1; i < diasOrdenados.length; i++) {
+      const dataAtual = diasOrdenados[i];
+      const dataAnterior = diasOrdenados[i - 1];
+      const diffDias = Math.floor((dataAtual - dataAnterior) / (1000 * 60 * 60 * 24));
+      
+      if (diffDias === 1) {
+        // Dia consecutivo
+        sequenciaTemporaria++;
+        maiorSequencia = Math.max(maiorSequencia, sequenciaTemporaria);
+      } else {
+        // Quebra na sequência - resetar contador
+        sequenciaTemporaria = 1;
+      }
+    }
+    
+    // Calcular sequência atual (dias consecutivos até hoje)
+    let sequenciaAtual = 0;
+    const hojeStr = hoje.toISOString().split('T')[0];
+    
+    if (diasComProgresso.has(hojeStr)) {
+      // Completou hoje - sequência atual começa em 1
+      sequenciaTemporaria = 1;
+      sequenciaAtual = 1;
+      
+      // Verificar dias anteriores consecutivos (indo para trás a partir de hoje)
+      for (let i = 1; i <= 365; i++) { // Limitar a 365 dias para evitar loop infinito
+        const dataAnterior = new Date(hoje);
+        dataAnterior.setDate(hoje.getDate() - i);
+        dataAnterior.setHours(0, 0, 0, 0);
+        const dataAnteriorStr = dataAnterior.toISOString().split('T')[0];
+        
+        if (diasComProgresso.has(dataAnteriorStr)) {
+          sequenciaTemporaria++;
+          sequenciaAtual = sequenciaTemporaria;
+        } else {
+          break; // Quebra na sequência - parar
+        }
+      }
+    } else {
+      // Não completou hoje - sequência atual é 0
+      sequenciaAtual = 0;
+    }
+    
+    // Atualizar sequência do usuário
+    await Usuario.findByIdAndUpdate(usuarioId, {
+      'sequencia.atual': sequenciaAtual,
+      'sequencia.maiorSequencia': Math.max(sequenciaAtual, maiorSequencia)
+    });
+  } catch (erro) {
+    console.error('Erro ao atualizar sequência geral do usuário:', erro);
+    // Não lançar erro - não queremos quebrar a conclusão de hábito
+  }
+}
 
 exports.listar = async (req, res) => {
   const requestId = req.requestId;
@@ -227,7 +319,7 @@ exports.concluir = async (req, res) => {
 
     // Atualizar estatísticas do hábito
     habito.estatisticas.totalConclusoes += 1;
-    habito.atualizarSequencia(true);
+    await habito.atualizarSequencia(true);
     habito.atualizarEstatisticas();
     
     logger.dbOperation('save', 'habitos', {
@@ -237,6 +329,9 @@ exports.concluir = async (req, res) => {
       maiorSequencia: habito.sequencia.maiorSequencia
     });
     await habito.save();
+
+    // Atualizar sequência geral do usuário
+    await atualizarSequenciaGeralUsuario(req.usuario._id);
 
     // Adicionar experiência ao usuário
     const nivelAnterior = req.usuario.nivel;

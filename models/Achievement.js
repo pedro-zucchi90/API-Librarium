@@ -48,7 +48,7 @@ const esquemaConquista = new mongoose.Schema({
   },
   desbloqueadaEm: {
     type: Date,
-    default: Date.now
+    default: null // Não desbloqueada por padrão
   },
   condicoes: {
     tipo: { type: String }, // 'sequencia', 'nivel', 'habitos_concluidos', etc

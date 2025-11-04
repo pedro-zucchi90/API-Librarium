@@ -79,14 +79,93 @@ esquemaHabito.methods.atualizarEstatisticas = function () {
   this.estatisticas.taxaConclusao = total > 0 ? (this.estatisticas.totalConclusoes / total) * 100 : 0;
 };
 
-// Atualizar sequência
-esquemaHabito.methods.atualizarSequencia = function (concluido) {
+// Atualizar sequência - verifica se foi realmente em dias consecutivos
+esquemaHabito.methods.atualizarSequencia = async function (concluido) {
+  const Progresso = require('./Progress');
+  
   if (concluido) {
-    this.sequencia.atual += 1;
-    if (this.sequencia.atual > this.sequencia.maiorSequencia) {
-      this.sequencia.maiorSequencia = this.sequencia.atual;
+    // Buscar todos os progressos deste hábito ordenados por data
+    const progressos = await Progresso.find({ 
+      idHabito: this._id 
+    }).sort({ data: -1 });
+    
+    if (progressos.length === 0) {
+      // Primeiro progresso - sequência começa em 1
+      this.sequencia.atual = 1;
+      this.sequencia.maiorSequencia = 1;
+      return;
     }
+    
+    // Agrupar por dia único
+    const diasComProgresso = new Set();
+    progressos.forEach(progresso => {
+      const dataProgresso = new Date(progresso.data);
+      dataProgresso.setHours(0, 0, 0, 0);
+      diasComProgresso.add(dataProgresso.getTime());
+    });
+    
+    // Converter para array ordenado
+    const diasOrdenados = Array.from(diasComProgresso)
+      .map(timestamp => new Date(timestamp))
+      .sort((a, b) => a - b);
+    
+    if (diasOrdenados.length === 1) {
+      // Primeiro dia - sequência começa em 1
+      this.sequencia.atual = 1;
+      this.sequencia.maiorSequencia = 1;
+      return;
+    }
+    
+    // Calcular sequência atual (começando do mais recente)
+    let sequenciaAtual = 1;
+    let maiorSequencia = 1;
+    let sequenciaTemporaria = 1;
+    
+    // Calcular maior sequência de todos os tempos
+    for (let i = 1; i < diasOrdenados.length; i++) {
+      const dataAtual = diasOrdenados[i];
+      const dataAnterior = diasOrdenados[i - 1];
+      const diffDias = Math.floor((dataAtual - dataAnterior) / (1000 * 60 * 60 * 24));
+      
+      if (diffDias === 1) {
+        sequenciaTemporaria++;
+        maiorSequencia = Math.max(maiorSequencia, sequenciaTemporaria);
+      } else {
+        sequenciaTemporaria = 1;
+      }
+    }
+    
+    // Calcular sequência atual (dias consecutivos até hoje)
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const hojeTimestamp = hoje.getTime();
+    
+    if (diasComProgresso.has(hojeTimestamp)) {
+      sequenciaTemporaria = 1;
+      sequenciaAtual = 1;
+      
+      // Verificar dias anteriores consecutivos
+      for (let i = 1; i <= 365; i++) {
+        const dataAnterior = new Date(hoje);
+        dataAnterior.setDate(hoje.getDate() - i);
+        dataAnterior.setHours(0, 0, 0, 0);
+        const dataAnteriorTimestamp = dataAnterior.getTime();
+        
+        if (diasComProgresso.has(dataAnteriorTimestamp)) {
+          sequenciaTemporaria++;
+          sequenciaAtual = sequenciaTemporaria;
+        } else {
+          break;
+        }
+      }
+    } else {
+      sequenciaAtual = 0;
+    }
+    
+    this.sequencia.atual = sequenciaAtual;
+    this.sequencia.maiorSequencia = Math.max(sequenciaAtual, maiorSequencia);
   } else {
+    // Não completado - resetar sequência
     this.sequencia.atual = 0;
   }
 };

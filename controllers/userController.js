@@ -182,26 +182,144 @@ exports.importar = async (req, res) => {
   }
 };
 
+// Função auxiliar para obter data atual em UTC (meia-noite)
+function obterDataAtualUTC() {
+  const agora = new Date();
+  const hojeUTC = new Date(Date.UTC(
+    agora.getUTCFullYear(),
+    agora.getUTCMonth(),
+    agora.getUTCDate(),
+    0, 0, 0, 0
+  ));
+  return hojeUTC;
+}
+
+// Função para verificar se hábito está travado baseado na frequência
+function verificarHabitotravado(habito, ultimoProgresso) {
+  if (!ultimoProgresso || !ultimoProgresso.data) {
+    return { travado: false };
+  }
+  
+  const agora = new Date();
+  const agoraUTC = new Date(Date.UTC(
+    agora.getUTCFullYear(),
+    agora.getUTCMonth(),
+    agora.getUTCDate(),
+    agora.getUTCHours(),
+    agora.getUTCMinutes(),
+    agora.getUTCSeconds()
+  ));
+  
+  const dataUltimoProgresso = new Date(ultimoProgresso.data);
+  const dataUltimoProgressoUTC = new Date(Date.UTC(
+    dataUltimoProgresso.getUTCFullYear(),
+    dataUltimoProgresso.getUTCMonth(),
+    dataUltimoProgresso.getUTCDate(),
+    0, 0, 0, 0
+  ));
+  
+  const hojeUTC = obterDataAtualUTC();
+  
+  switch (habito.frequencia) {
+    case 'diario': {
+      // Travado até o próximo dia (meia-noite UTC)
+      const proximoDia = new Date(dataUltimoProgressoUTC);
+      proximoDia.setUTCDate(proximoDia.getUTCDate() + 1);
+      
+      const travado = agoraUTC < proximoDia;
+      return {
+        travado,
+        proximoDesbloqueio: proximoDia.toISOString(),
+        mensagem: travado ? 'Você já completou este hábito hoje. Desbloqueia amanhã!' : null
+      };
+    }
+    
+    case 'semanal': {
+      // Travado até a próxima semana (mesmo dia da semana)
+      const proximaSemana = new Date(dataUltimoProgressoUTC);
+      proximaSemana.setUTCDate(proximaSemana.getUTCDate() + 7);
+      
+      const travado = agoraUTC < proximaSemana;
+      return {
+        travado,
+        proximoDesbloqueio: proximaSemana.toISOString(),
+        mensagem: travado ? 'Você já completou este hábito esta semana. Desbloqueia na próxima semana!' : null
+      };
+    }
+    
+    case 'mensal': {
+      // Travado até o próximo mês (mesmo dia)
+      const proximoMes = new Date(dataUltimoProgressoUTC);
+      proximoMes.setUTCMonth(proximoMes.getUTCMonth() + 1);
+      
+      const travado = agoraUTC < proximoMes;
+      return {
+        travado,
+        proximoDesbloqueio: proximoMes.toISOString(),
+        mensagem: travado ? 'Você já completou este hábito este mês. Desbloqueia no próximo mês!' : null
+      };
+    }
+    
+    default:
+      return { travado: false };
+  }
+}
+
 exports.dashboard = async (req, res) => {
   try {
     const {usuario} = req;
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
+    const hojeUTC = obterDataAtualUTC();
+    
+    // Buscar hábitos ativos
     const habitosAtivos = await Habito.find({ idUsuario: usuario._id, ativo: true });
-    const progressoHoje = await Progresso.find({ idUsuario: usuario._id, data: hoje }).populate('idHabito');
+    
+    // Buscar progressos de hoje (comparando por data UTC)
+    const progressoHoje = await Progresso.find({ 
+      idUsuario: usuario._id,
+      data: {
+        $gte: hojeUTC,
+        $lt: new Date(hojeUTC.getTime() + 24 * 60 * 60 * 1000) // Próximo dia
+      }
+    }).populate('idHabito');
+    
+    // Buscar últimos progressos de cada hábito para verificar travamento
+    const habitosComStatus = await Promise.all(habitosAtivos.map(async (habito) => {
+      // Buscar último progresso concluído deste hábito
+      const ultimoProgresso = await Progresso.findOne({
+        idHabito: habito._id,
+        idUsuario: usuario._id,
+        status: 'concluido'
+      }).sort({ data: -1 });
+      
+      // Verificar se está travado
+      const statusTravamento = verificarHabitotravado(habito, ultimoProgresso);
+      
+      // Verificar se foi completado hoje
+      const progressoHojeHabito = progressoHoje.find(p => 
+        p.idHabito._id.toString() === habito._id.toString()
+      );
+      
+      return {
+        ...habito.toObject(),
+        concluidoHoje: !!progressoHojeHabito && progressoHojeHabito.status === 'concluido',
+        statusHoje: progressoHojeHabito?.status || 'pendente',
+        travado: statusTravamento.travado,
+        proximoDesbloqueio: statusTravamento.proximoDesbloqueio,
+        mensagemTravamento: statusTravamento.mensagem
+      };
+    }));
+    
     const totalHabitos = habitosAtivos.length;
     const habitosConcluidos = progressoHoje.filter(p => p.status === 'concluido').length;
     const porcentagemConclusao = totalHabitos > 0 ? (habitosConcluidos / totalHabitos) * 100 : 0;
     const conquistasRecentes = await Conquista.find({ idUsuario: usuario._id }).sort({ desbloqueadaEm: -1 }).limit(3);
+    
     res.json({
       sucesso: true,
       dashboard: {
         usuario: { nomeUsuario: usuario.nomeUsuario, nivel: usuario.nivel, experiencia: usuario.experiencia, titulo: usuario.titulo, avatar: usuario.avatar, sequencia: usuario.sequencia },
         estatisticasHoje: { totalHabitos, habitosConcluidos, porcentagemConclusao: Math.round(porcentagemConclusao), experienciaGanhaHoje: progressoHoje.reduce((total, p) => total + p.experienciaGanha, 0) },
-        habitos: habitosAtivos.map(habito => {
-          const progressoHabito = progressoHoje.find(p => p.idHabito._id.toString() === habito._id.toString());
-          return { ...habito.toObject(), concluidoHoje: !!progressoHabito, statusHoje: progressoHabito?.status || 'pendente' };
-        }),
+        habitos: habitosComStatus,
         conquistasRecentes
       }
     });
