@@ -3,6 +3,7 @@ const Habito = require('../models/Habit');
 const Desafio = require('../models/Challenge');
 const Mensagem = require('../models/Message');
 const Batalha = require('../models/Battle');
+const Amizade = require('../models/Friendship');
 
 exports.criarBatalha = async (req, res) => {
   try {
@@ -99,7 +100,7 @@ exports.listarBatalhas = async (req, res) => {
     const filtros = { $or: [{ jogador1: req.usuario._id }, { jogador2: req.usuario._id }] };
     if (status) { filtros.status = status; }
     if (tipo) { filtros.tipoBatalha = tipo; }
-    const batalhas = await Batalha.find(filtros).populate('jogador1', 'nomeUsuario avatar nivel').populate('jogador2', 'nomeUsuario avatar nivel').sort({ createdAt: -1 });
+    const batalhas = await Batalha.find(filtros).populate('jogador1', 'nomeUsuario avatar nivel fotoPerfil').populate('jogador2', 'nomeUsuario avatar nivel fotoPerfil').sort({ createdAt: -1 });
     res.json({ sucesso: true, mensagem: `⚔️ ${batalhas.length} batalhas encontradas`, batalhas });
   } catch (erro) {
     console.error('Erro ao listar batalhas:', erro);
@@ -176,7 +177,7 @@ exports.listarDesafios = async (req, res) => {
     if (tipo) {
       filtros.tipoDesafio = tipo; 
     }
-    const desafios = await Desafio.find(filtros).populate('remetente', 'nomeUsuario avatar nivel').populate('destinatario', 'nomeUsuario avatar nivel').sort({ createdAt: -1 });
+    const desafios = await Desafio.find(filtros).populate('remetente', 'nomeUsuario avatar nivel fotoPerfil').populate('destinatario', 'nomeUsuario avatar nivel fotoPerfil').sort({ createdAt: -1 });
     res.json({ sucesso: true, mensagem: `⚔️ ${desafios.length} desafios encontrados`, desafios });
   } catch (erro) {
     console.error('Erro ao listar desafios:', erro);
@@ -217,6 +218,17 @@ exports.obterConversa = async (req, res) => {
   try {
     const { limite = 50 } = req.query;
     const conversa = await Mensagem.obterConversa(req.usuario._id, req.params.usuarioId, parseInt(limite));
+    // Marcar mensagens como lidas ao abrir conversa
+    await Mensagem.updateMany(
+      {
+        remetente: req.params.usuarioId,
+        destinatario: req.usuario._id,
+        lida: false
+      },
+      {
+        $set: { lida: true, dataLeitura: new Date() }
+      }
+    );
     res.json({ sucesso: true, mensagem: `📨 ${conversa.length} mensagens na conversa`, conversa: conversa.reverse() });
   } catch (erro) {
     console.error('Erro ao obter conversa:', erro);
@@ -278,7 +290,7 @@ exports.ranking = async (req, res) => {
     const usuariosAtivos = await Usuario.find({
       ultimaAtividade: { $gte: dataInicio }
     })
-      .select('nomeUsuario nivel experiencia titulo avatar ultimaAtividade')
+      .select('nomeUsuario nivel experiencia titulo avatar fotoPerfil ultimaAtividade')
       .sort({ experiencia: -1, nivel: -1 })
       .limit(parseInt(limite));
 
@@ -297,6 +309,7 @@ exports.ranking = async (req, res) => {
         experiencia: usuario.experiencia,
         titulo: usuario.titulo,
         avatar: usuario.avatar,
+        fotoPerfil: usuario.fotoPerfil,
         ultimaAtividade: usuario.ultimaAtividade
       })),
       usuarioAtual: {
@@ -309,6 +322,319 @@ exports.ranking = async (req, res) => {
   } catch (erro) {
     console.error('Erro ao obter ranking:', erro);
     res.status(500).json({ erro: 'Erro interno do servidor', mensagem: '💀 Não foi possível carregar o ranking...' });
+  }
+};
+
+// ===== SISTEMA DE AMIZADES =====
+
+exports.enviarSolicitacaoAmizade = async (req, res) => {
+  try {
+    const { usuarioId } = req.body;
+    
+    if (usuarioId === req.usuario._id.toString()) {
+      return res.status(400).json({
+        erro: 'Ação inválida',
+        mensagem: '⚔️ Você não pode enviar solicitação de amizade para si mesmo'
+      });
+    }
+
+    const destinatario = await Usuario.findById(usuarioId);
+    if (!destinatario) {
+      return res.status(404).json({
+        erro: 'Usuário não encontrado',
+        mensagem: '🌑 Este caçador não existe no Librarium'
+      });
+    }
+
+    // Verificar se já existe amizade ou solicitação
+    const amizadeExistente = await Amizade.findOne({
+      $or: [
+        { usuario1: req.usuario._id, usuario2: usuarioId },
+        { usuario1: usuarioId, usuario2: req.usuario._id }
+      ]
+    });
+
+    if (amizadeExistente) {
+      if (amizadeExistente.status === 'aceita') {
+        return res.status(400).json({
+          erro: 'Já são amigos',
+          mensagem: '⚔️ Vocês já são amigos!'
+        });
+      }
+      if (amizadeExistente.status === 'pendente') {
+        return res.status(400).json({
+          erro: 'Solicitação já existe',
+          mensagem: '⚔️ Já existe uma solicitação de amizade pendente'
+        });
+      }
+    }
+
+    // Criar nova solicitação
+    const novaAmizade = new Amizade({
+      usuario1: req.usuario._id,
+      usuario2: usuarioId,
+      status: 'pendente',
+      solicitadoPor: req.usuario._id
+    });
+    await novaAmizade.save();
+
+    // Enviar notificação
+    const notificacao = new Mensagem({
+      remetente: req.usuario._id,
+      destinatario: usuarioId,
+      texto: `${req.usuario.nomeUsuario} quer ser seu amigo!`,
+      tipo: 'sistema'
+    });
+    await notificacao.save();
+
+    res.status(201).json({
+      sucesso: true,
+      mensagem: '🤝 Solicitação de amizade enviada!',
+      amizade: novaAmizade
+    });
+  } catch (erro) {
+    console.error('Erro ao enviar solicitação de amizade:', erro);
+    res.status(500).json({
+      erro: 'Erro interno do servidor',
+      mensagem: '💀 Não foi possível enviar a solicitação...'
+    });
+  }
+};
+
+exports.aceitarSolicitacaoAmizade = async (req, res) => {
+  try {
+    const { amizadeId } = req.body;
+    
+    const amizade = await Amizade.findById(amizadeId)
+      .populate('usuario1', 'nomeUsuario')
+      .populate('usuario2', 'nomeUsuario');
+
+    if (!amizade) {
+      return res.status(404).json({
+        erro: 'Solicitação não encontrada',
+        mensagem: '🌑 Esta solicitação não existe'
+      });
+    }
+
+    if (amizade.usuario2.toString() !== req.usuario._id.toString()) {
+      return res.status(403).json({
+        erro: 'Acesso negado',
+        mensagem: '⚔️ Você não pode aceitar esta solicitação'
+      });
+    }
+
+    if (amizade.status !== 'pendente') {
+      return res.status(400).json({
+        erro: 'Solicitação inválida',
+        mensagem: '⚔️ Esta solicitação não está mais pendente'
+      });
+    }
+
+    amizade.status = 'aceita';
+    amizade.dataAceitacao = new Date();
+    await amizade.save();
+
+    // Enviar notificação
+    const notificacao = new Mensagem({
+      remetente: req.usuario._id,
+      destinatario: amizade.usuario1,
+      texto: `${req.usuario.nomeUsuario} aceitou sua solicitação de amizade!`,
+      tipo: 'sistema'
+    });
+    await notificacao.save();
+
+    res.json({
+      sucesso: true,
+      mensagem: '🤝 Amizade aceita!',
+      amizade
+    });
+  } catch (erro) {
+    console.error('Erro ao aceitar solicitação de amizade:', erro);
+    res.status(500).json({
+      erro: 'Erro interno do servidor',
+      mensagem: '💀 Não foi possível aceitar a solicitação...'
+    });
+  }
+};
+
+exports.rejeitarSolicitacaoAmizade = async (req, res) => {
+  try {
+    const { amizadeId } = req.body;
+    
+    const amizade = await Amizade.findById(amizadeId);
+
+    if (!amizade) {
+      return res.status(404).json({
+        erro: 'Solicitação não encontrada',
+        mensagem: '🌑 Esta solicitação não existe'
+      });
+    }
+
+    if (amizade.usuario2.toString() !== req.usuario._id.toString()) {
+      return res.status(403).json({
+        erro: 'Acesso negado',
+        mensagem: '⚔️ Você não pode rejeitar esta solicitação'
+      });
+    }
+
+    amizade.status = 'rejeitada';
+    await amizade.save();
+
+    res.json({
+      sucesso: true,
+      mensagem: 'Solicitação de amizade rejeitada',
+      amizade
+    });
+  } catch (erro) {
+    console.error('Erro ao rejeitar solicitação de amizade:', erro);
+    res.status(500).json({
+      erro: 'Erro interno do servidor',
+      mensagem: '💀 Não foi possível rejeitar a solicitação...'
+    });
+  }
+};
+
+exports.listarAmigos = async (req, res) => {
+  try {
+    const amigos = await Amizade.obterAmigos(req.usuario._id);
+    
+    res.json({
+      sucesso: true,
+      mensagem: `🤝 ${amigos.length} amigo(s) encontrado(s)`,
+      amigos
+    });
+  } catch (erro) {
+    console.error('Erro ao listar amigos:', erro);
+    res.status(500).json({
+      erro: 'Erro interno do servidor',
+      mensagem: '💀 Não foi possível carregar os amigos...'
+    });
+  }
+};
+
+exports.listarSolicitacoesPendentes = async (req, res) => {
+  try {
+    const solicitacoes = await Amizade.obterSolicitacoesPendentes(req.usuario._id);
+    
+    res.json({
+      sucesso: true,
+      mensagem: `${solicitacoes.length} solicitação(ões) pendente(s)`,
+      solicitacoes
+    });
+  } catch (erro) {
+    console.error('Erro ao listar solicitações pendentes:', erro);
+    res.status(500).json({
+      erro: 'Erro interno do servidor',
+      mensagem: '💀 Não foi possível carregar as solicitações...'
+    });
+  }
+};
+
+exports.listarSolicitacoesEnviadas = async (req, res) => {
+  try {
+    const solicitacoes = await Amizade.obterSolicitacoesEnviadas(req.usuario._id);
+    
+    res.json({
+      sucesso: true,
+      mensagem: `${solicitacoes.length} solicitação(ões) enviada(s)`,
+      solicitacoes
+    });
+  } catch (erro) {
+    console.error('Erro ao listar solicitações enviadas:', erro);
+    res.status(500).json({
+      erro: 'Erro interno do servidor',
+      mensagem: '💀 Não foi possível carregar as solicitações...'
+    });
+  }
+};
+
+exports.removerAmizade = async (req, res) => {
+  try {
+    const { amizadeId } = req.body;
+    
+    const amizade = await Amizade.findById(amizadeId);
+
+    if (!amizade) {
+      return res.status(404).json({
+        erro: 'Amizade não encontrada',
+        mensagem: '🌑 Esta amizade não existe'
+      });
+    }
+
+    if (amizade.usuario1.toString() !== req.usuario._id.toString() &&
+        amizade.usuario2.toString() !== req.usuario._id.toString()) {
+      return res.status(403).json({
+        erro: 'Acesso negado',
+        mensagem: '⚔️ Você não pode remover esta amizade'
+      });
+    }
+
+    await amizade.deleteOne();
+
+    res.json({
+      sucesso: true,
+      mensagem: 'Amizade removida com sucesso'
+    });
+  } catch (erro) {
+    console.error('Erro ao remover amizade:', erro);
+    res.status(500).json({
+      erro: 'Erro interno do servidor',
+      mensagem: '💀 Não foi possível remover a amizade...'
+    });
+  }
+};
+
+exports.buscarUsuarios = async (req, res) => {
+  try {
+    const { query, limite = 20 } = req.query;
+    
+    if (!query || query.trim().length < 2) {
+      return res.status(400).json({
+        erro: 'Query inválida',
+        mensagem: 'Por favor, forneça pelo menos 2 caracteres para buscar'
+      });
+    }
+
+    const usuarios = await Usuario.find({
+      $or: [
+        { nomeUsuario: { $regex: query, $options: 'i' } },
+        { email: { $regex: query, $options: 'i' } }
+      ],
+      _id: { $ne: req.usuario._id }
+    })
+      .select('nomeUsuario avatar nivel experiencia titulo fotoPerfil ultimaAtividade')
+      .limit(parseInt(limite))
+      .sort({ nivel: -1, experiencia: -1 });
+
+    // Verificar status de amizade para cada usuário
+    const usuariosComStatus = await Promise.all(usuarios.map(async (usuario) => {
+      const saoAmigos = await Amizade.saoAmigos(req.usuario._id, usuario._id);
+      const solicitacaoPendente = await Amizade.findOne({
+        $or: [
+          { usuario1: req.usuario._id, usuario2: usuario._id, status: 'pendente' },
+          { usuario1: usuario._id, usuario2: req.usuario._id, status: 'pendente' }
+        ]
+      });
+
+      return {
+        ...usuario.toObject(),
+        saoAmigos,
+        solicitacaoPendente: solicitacaoPendente !== null,
+        solicitacaoId: solicitacaoPendente?._id
+      };
+    }));
+
+    res.json({
+      sucesso: true,
+      mensagem: `${usuariosComStatus.length} usuário(s) encontrado(s)`,
+      usuarios: usuariosComStatus
+    });
+  } catch (erro) {
+    console.error('Erro ao buscar usuários:', erro);
+    res.status(500).json({
+      erro: 'Erro interno do servidor',
+      mensagem: '💀 Não foi possível buscar usuários...'
+    });
   }
 };
 

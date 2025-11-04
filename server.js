@@ -150,6 +150,9 @@ app.get('/api/saude', (req, res) => {
   });
 });
 
+// Servir arquivos estáticos de upload
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Rotas da API
 app.use('/api/auth', authRoutes);
 app.use('/api/habitos', habitRoutes);

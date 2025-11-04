@@ -38,7 +38,8 @@ exports.registrar = async (req, res) => {
         nivel: novoUsuario.nivel,
         experiencia: novoUsuario.experiencia,
         titulo: novoUsuario.titulo,
-        avatar: novoUsuario.avatar
+        avatar: novoUsuario.avatar,
+        fotoPerfil: novoUsuario.fotoPerfil
       }
     });
   } catch (erro) {
@@ -88,7 +89,8 @@ exports.login = async (req, res) => {
         titulo: usuario.titulo,
         avatar: usuario.avatar,
         sequencia: usuario.sequencia,
-        ultimaAtividade: usuario.ultimaAtividade
+        ultimaAtividade: usuario.ultimaAtividade,
+        fotoPerfil: usuario.fotoPerfil
       }
     });
   } catch (erro) {
@@ -119,7 +121,8 @@ exports.obterPerfil = async (req, res) => {
         sequencia: usuario.sequencia,
         preferencias: usuario.preferencias,
         dataEntrada: usuario.dataEntrada,
-        ultimaAtividade: usuario.ultimaAtividade
+        ultimaAtividade: usuario.ultimaAtividade,
+        fotoPerfil: usuario.fotoPerfil
       }
     });
   } catch (erro) {
@@ -170,7 +173,8 @@ exports.atualizarPerfil = async (req, res) => {
         titulo: usuario.titulo,
         avatar: usuario.avatar,
         personalizacaoAvatar: usuario.personalizacaoAvatar,
-        preferencias: usuario.preferencias
+        preferencias: usuario.preferencias,
+        fotoPerfil: usuario.fotoPerfil
       }
     });
   } catch (erro) {

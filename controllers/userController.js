@@ -393,6 +393,80 @@ exports.conquistas = async (req, res) => {
   }
 };
 
+exports.uploadFotoPerfil = async (req, res) => {
+  try {
+    const { usuario } = req;
+    
+    if (!req.file) {
+      return res.status(400).json({
+        erro: 'Nenhuma imagem enviada',
+        mensagem: 'Por favor, selecione uma imagem para upload'
+      });
+    }
+
+    // URL da foto de perfil (relativa ao servidor)
+    const fotoUrl = `/uploads/perfis/${req.file.filename}`;
+    
+    // Remover foto antiga se existir
+    if (usuario.fotoPerfil && usuario.fotoPerfil.startsWith('/uploads/perfis/')) {
+      const path = require('path');
+      const fs = require('fs');
+      const oldFilePath = path.join(__dirname, '..', usuario.fotoPerfil);
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
+      }
+    }
+
+    // Atualizar foto de perfil
+    usuario.fotoPerfil = fotoUrl;
+    await usuario.save();
+
+    res.json({
+      sucesso: true,
+      mensagem: 'Foto de perfil atualizada com sucesso!',
+      fotoPerfil: fotoUrl
+    });
+  } catch (erro) {
+    console.error('Erro ao fazer upload da foto de perfil:', erro);
+    res.status(500).json({
+      erro: 'Erro interno do servidor',
+      mensagem: '💀 Não foi possível fazer upload da foto...'
+    });
+  }
+};
+
+exports.removerFotoPerfil = async (req, res) => {
+  try {
+    const { usuario } = req;
+
+    if (usuario.fotoPerfil) {
+      const path = require('path');
+      const fs = require('fs');
+      const filePath = path.join(__dirname, '..', usuario.fotoPerfil);
+      
+      // Remover arquivo se existir
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+
+      // Remover referência
+      usuario.fotoPerfil = null;
+      await usuario.save();
+    }
+
+    res.json({
+      sucesso: true,
+      mensagem: 'Foto de perfil removida com sucesso!'
+    });
+  } catch (erro) {
+    console.error('Erro ao remover foto de perfil:', erro);
+    res.status(500).json({
+      erro: 'Erro interno do servidor',
+      mensagem: '💀 Não foi possível remover a foto...'
+    });
+  }
+};
+
 exports.atualizarPreferencias = async (req, res) => {
   try {
     const { notificacoes, tema, idioma } = req.body;

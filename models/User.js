@@ -90,6 +90,10 @@ const esquemaUsuario = new mongoose.Schema({
     notificacoes: { type: Boolean, default: true },
     tema: { type: String, default: 'escuro', enum: ['escuro', 'hollow', 'carmesim'] },
     idioma: { type: String, default: 'pt-BR' }
+  },
+  fotoPerfil: {
+    type: String,
+    default: null // URL da foto de perfil ou null se não tiver
   }
 }, {
   timestamps: true
