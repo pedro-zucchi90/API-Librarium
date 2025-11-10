@@ -110,4 +110,68 @@ esquemaMensagem.statics.obterEstatisticas = async function (usuarioId) {
   };
 };
 
+// Método para listar todas as conversas de um usuário
+esquemaMensagem.statics.listarConversas = async function (usuarioId) {
+  // Buscar todas as mensagens onde o usuário é remetente ou destinatário
+  const mensagens = await this.find({
+    $or: [
+      { remetente: usuarioId },
+      { destinatario: usuarioId }
+    ]
+  })
+    .sort({ createdAt: -1 })
+    .populate('remetente', 'nomeUsuario avatar fotoPerfil')
+    .populate('destinatario', 'nomeUsuario avatar fotoPerfil')
+    .lean();
+
+  // Agrupar por conversa (outro usuário)
+  const conversasMap = new Map();
+
+  mensagens.forEach(mensagem => {
+    const remetenteId = mensagem.remetente._id.toString();
+    const destinatarioId = mensagem.destinatario._id.toString();
+    const usuarioIdStr = usuarioId.toString();
+    
+    const outroUsuarioId = remetenteId === usuarioIdStr
+      ? destinatarioId
+      : remetenteId;
+    
+    const outroUsuario = remetenteId === usuarioIdStr
+      ? mensagem.destinatario
+      : mensagem.remetente;
+
+    if (!conversasMap.has(outroUsuarioId)) {
+      conversasMap.set(outroUsuarioId, {
+        usuarioId: outroUsuarioId,
+        usuario: outroUsuario,
+        ultimaMensagem: mensagem,
+        naoLidas: 0,
+        totalMensagens: 0
+      });
+    }
+
+    const conversa = conversasMap.get(outroUsuarioId);
+    conversa.totalMensagens++;
+    
+    // Contar não lidas apenas se o usuário atual é o destinatário
+    if (destinatarioId === usuarioIdStr && !mensagem.lida) {
+      conversa.naoLidas++;
+    }
+
+    // Atualizar última mensagem se for mais recente
+    const ultimaData = new Date(conversa.ultimaMensagem.createdAt);
+    const mensagemData = new Date(mensagem.createdAt);
+    if (mensagemData > ultimaData) {
+      conversa.ultimaMensagem = mensagem;
+    }
+  });
+
+  // Converter map para array e ordenar por última mensagem
+  const conversas = Array.from(conversasMap.values()).sort((a, b) => {
+    return new Date(b.ultimaMensagem.createdAt) - new Date(a.ultimaMensagem.createdAt);
+  });
+
+  return conversas;
+};
+
 module.exports = mongoose.model('Mensagem', esquemaMensagem);

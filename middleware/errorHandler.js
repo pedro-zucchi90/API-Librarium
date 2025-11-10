@@ -139,8 +139,28 @@ const errorHandler = (err, req, res, next) => {
     resposta.codigo = err.code;
   }
 
-  // Enviar resposta
-  res.status(statusCode).json(resposta);
+  // Verificar se a resposta já foi enviada
+  if (!res.headersSent) {
+    try {
+      // Enviar resposta
+      res.status(statusCode).json(resposta);
+    } catch (sendError) {
+      // Se houver erro ao enviar resposta, apenas logar
+      logger.error('Erro ao enviar resposta de erro no errorHandler:', {
+        originalError: err.message,
+        sendError: sendError.message,
+        url: req.originalUrl,
+        method: req.method
+      });
+    }
+  } else {
+    // Se a resposta já foi enviada, apenas logar
+    logger.error('Tentativa de enviar resposta após headers já enviados:', {
+      url: req.originalUrl,
+      method: req.method,
+      statusCode
+    });
+  }
 };
 
 module.exports = {

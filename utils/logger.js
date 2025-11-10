@@ -319,6 +319,17 @@ logger.errorMiddleware = (err, req, res, next) => {
     logger.error(`Server Error`, errorData);
   }
 
+  // Verificar se a resposta já foi enviada
+  if (res.headersSent) {
+    // Se a resposta já foi enviada, apenas logar e não tentar enviar novamente
+    logger.error('Tentativa de enviar resposta após headers já enviados no errorMiddleware:', {
+      url: req.originalUrl,
+      method: req.method,
+      requestId
+    });
+    return;
+  }
+
   // Resposta padronizada
   const statusCode = err.statusCode || 500;
   const response = {
@@ -335,7 +346,16 @@ logger.errorMiddleware = (err, req, res, next) => {
     response.details = err.details;
   }
 
-  res.status(statusCode).json(response);
+  try {
+    res.status(statusCode).json(response);
+  } catch (sendError) {
+    // Se houver erro ao enviar resposta, apenas logar
+    logger.error('Erro ao enviar resposta de erro:', {
+      originalError: err.message,
+      sendError: sendError.message,
+      requestId
+    });
+  }
 };
 
 // Função para log de operações de banco de dados

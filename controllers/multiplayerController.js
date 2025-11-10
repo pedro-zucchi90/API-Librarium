@@ -49,18 +49,64 @@ exports.criarBatalha = async (req, res) => {
 exports.aceitarBatalha = async (req, res) => {
   try {
     const batalha = await Batalha.findById(req.params.id);
-    if (!batalha){ return res.status(404).json({ erro: 'Batalha não encontrada', mensagem: '🌑 Esta batalha não existe' })};
-    if (batalha.jogador2.toString() !== req.usuario._id.toString()) {return res.status(403).json({ erro: 'Acesso negado', mensagem: '⚔️ Você não pode aceitar esta batalha' })};
-    if (batalha.status !== 'aguardando') {return res.status(400).json({ erro: 'Batalha inválida', mensagem: '⚔️ Esta batalha não está mais aguardando aceitação' })};
+    
+    if (!batalha) {
+      return res.status(404).json({
+        erro: 'Batalha não encontrada',
+        mensagem: '🌑 Esta batalha não existe'
+      });
+    }
+
+    const jogador2Id = batalha.jogador2.toString();
+    const usuarioAtualId = req.usuario._id.toString();
+    const jogador1Id = batalha.jogador1.toString();
+
+    // Verificar se o usuário atual é o destinatário (jogador2) e NÃO o criador (jogador1)
+    if (jogador2Id !== usuarioAtualId) {
+      return res.status(403).json({
+        erro: 'Acesso negado',
+        mensagem: '⚔️ Você não pode aceitar esta batalha. Apenas o destinatário pode aceitar.'
+      });
+    }
+
+    // Verificar se o usuário não é o criador da batalha
+    if (jogador1Id === usuarioAtualId) {
+      return res.status(403).json({
+        erro: 'Acesso negado',
+        mensagem: '⚔️ Você não pode aceitar uma batalha que você mesmo criou.'
+      });
+    }
+
+    if (batalha.status !== 'aguardando') {
+      return res.status(400).json({
+        erro: 'Batalha inválida',
+        mensagem: '⚔️ Esta batalha não está mais aguardando aceitação'
+      });
+    }
+
     batalha.status = 'em_andamento';
     batalha.adicionarAcao('batalha_aceita', req.usuario._id);
     await batalha.save();
-    const notificacao = new Mensagem({ remetente: req.usuario._id, destinatario: batalha.jogador1, texto: `${req.usuario.nomeUsuario} aceitou sua batalha! A caçada começou!`, tipo: 'desafio' });
+    
+    const notificacao = new Mensagem({
+      remetente: req.usuario._id,
+      destinatario: batalha.jogador1,
+      texto: `${req.usuario.nomeUsuario} aceitou sua batalha! A caçada começou!`,
+      tipo: 'desafio'
+    });
     await notificacao.save();
-    res.json({ sucesso: true, mensagem: '⚔️ Batalha aceita! A caçada começou!', batalha });
+    
+    res.json({
+      sucesso: true,
+      mensagem: '⚔️ Batalha aceita! A caçada começou!',
+      batalha
+    });
   } catch (erro) {
     console.error('Erro ao aceitar batalha:', erro);
-    res.status(500).json({ erro: 'Erro interno do servidor', mensagem: '💀 Não foi possível aceitar a batalha...' });
+    res.status(500).json({
+      erro: 'Erro interno do servidor',
+      mensagem: '💀 Não foi possível aceitar a batalha...'
+    });
   }
 };
 
@@ -105,6 +151,32 @@ exports.listarBatalhas = async (req, res) => {
   } catch (erro) {
     console.error('Erro ao listar batalhas:', erro);
     res.status(500).json({ erro: 'Erro interno do servidor', mensagem: '💀 Não foi possível carregar as batalhas...' });
+  }
+};
+
+// Listar apenas batalhas pendentes que o usuário RECEBEU (não as que ele criou)
+exports.listarBatalhasPendentes = async (req, res) => {
+  try {
+    // Apenas batalhas onde o usuário é jogador2 (destinatário) e status é 'aguardando'
+    const batalhas = await Batalha.find({
+      jogador2: req.usuario._id,
+      status: 'aguardando'
+    })
+      .populate('jogador1', 'nomeUsuario avatar nivel fotoPerfil')
+      .populate('jogador2', 'nomeUsuario avatar nivel fotoPerfil')
+      .sort({ createdAt: -1 });
+    
+    res.json({
+      sucesso: true,
+      mensagem: `⚔️ ${batalhas.length} batalha(s) pendente(s)`,
+      batalhas
+    });
+  } catch (erro) {
+    console.error('Erro ao listar batalhas pendentes:', erro);
+    res.status(500).json({
+      erro: 'Erro interno do servidor',
+      mensagem: '💀 Não foi possível carregar as batalhas pendentes...'
+    });
   }
 };
 
@@ -200,7 +272,18 @@ exports.enviarMensagem = async (req, res) => {
       if (!mensagemOriginal) {return res.status(404).json({ erro: 'Mensagem original não encontrada', mensagem: '🌑 A mensagem que você está respondendo não existe' })};
       if (!mensagemOriginal.podeSerRespondida()) {return res.status(400).json({ erro: 'Mensagem muito antiga', mensagem: '⚔️ Esta mensagem é muito antiga para ser respondida' })};
     }
-    const novaMensagem = new Mensagem({ remetente: req.usuario._id, destinatario: destinatarioId, texto, tipo: tipo || 'privada', anexos: anexos || [], respostaPara });
+    // Validar tipo de mensagem - apenas valores permitidos no enum
+    const tiposPermitidos = ['privada', 'desafio', 'sistema', 'conquista'];
+    const tipoMensagem = tipo && tiposPermitidos.includes(tipo) ? tipo : 'privada';
+    
+    const novaMensagem = new Mensagem({ 
+      remetente: req.usuario._id, 
+      destinatario: destinatarioId, 
+      texto, 
+      tipo: tipoMensagem, 
+      anexos: anexos || [], 
+      respostaPara 
+    });
     await novaMensagem.save();
     if (respostaPara) {
       const mensagemOriginal = await Mensagem.findById(respostaPara);
@@ -233,6 +316,23 @@ exports.obterConversa = async (req, res) => {
   } catch (erro) {
     console.error('Erro ao obter conversa:', erro);
     res.status(500).json({ erro: 'Erro interno do servidor', mensagem: '💀 Não foi possível carregar a conversa...' });
+  }
+};
+
+exports.listarConversas = async (req, res) => {
+  try {
+    const conversas = await Mensagem.listarConversas(req.usuario._id);
+    res.json({
+      sucesso: true,
+      mensagem: `📨 ${conversas.length} conversa(s) encontrada(s)`,
+      conversas: conversas
+    });
+  } catch (erro) {
+    console.error('Erro ao listar conversas:', erro);
+    res.status(500).json({
+      erro: 'Erro interno do servidor',
+      mensagem: '💀 Não foi possível listar as conversas...'
+    });
   }
 };
 
@@ -405,9 +505,14 @@ exports.aceitarSolicitacaoAmizade = async (req, res) => {
   try {
     const { amizadeId } = req.body;
     
-    const amizade = await Amizade.findById(amizadeId)
-      .populate('usuario1', 'nomeUsuario')
-      .populate('usuario2', 'nomeUsuario');
+    if (!amizadeId) {
+      return res.status(400).json({
+        erro: 'ID da amizade não fornecido',
+        mensagem: '🌑 Por favor, forneça o ID da solicitação'
+      });
+    }
+
+    const amizade = await Amizade.findById(amizadeId);
 
     if (!amizade) {
       return res.status(404).json({
@@ -416,10 +521,43 @@ exports.aceitarSolicitacaoAmizade = async (req, res) => {
       });
     }
 
-    if (amizade.usuario2.toString() !== req.usuario._id.toString()) {
+    // Verificar se o usuário atual é o destinatário (usuario2) da solicitação
+    // usuario2 é quem recebe a solicitação e pode aceitar
+    const usuario2Id = amizade.usuario2.toString();
+    const usuarioAtualId = req.usuario._id.toString();
+    const usuario1Id = amizade.usuario1.toString();
+    const solicitadoPorId = amizade.solicitadoPor.toString();
+    
+    console.log('Verificando permissão para aceitar:', {
+      amizadeId: amizade._id.toString(),
+      usuario2Id,
+      usuarioAtualId,
+      usuario1Id,
+      solicitadoPorId,
+      status: amizade.status
+    });
+
+    // Verificar se o usuário atual é o destinatário (usuario2)
+    if (usuario2Id !== usuarioAtualId) {
       return res.status(403).json({
         erro: 'Acesso negado',
-        mensagem: '⚔️ Você não pode aceitar esta solicitação'
+        mensagem: '⚔️ Você não pode aceitar esta solicitação. Apenas o destinatário pode aceitar.'
+      });
+    }
+
+    // Verificar se o usuário não é quem enviou a solicitação (solicitadoPor)
+    if (solicitadoPorId === usuarioAtualId) {
+      return res.status(403).json({
+        erro: 'Acesso negado',
+        mensagem: '⚔️ Você não pode aceitar uma solicitação que você mesmo enviou.'
+      });
+    }
+
+    // Verificar se o usuário não é o usuario1 (quem enviou)
+    if (usuario1Id === usuarioAtualId) {
+      return res.status(403).json({
+        erro: 'Acesso negado',
+        mensagem: '⚔️ Você não pode aceitar uma solicitação que você mesmo enviou.'
       });
     }
 
@@ -461,6 +599,13 @@ exports.rejeitarSolicitacaoAmizade = async (req, res) => {
   try {
     const { amizadeId } = req.body;
     
+    if (!amizadeId) {
+      return res.status(400).json({
+        erro: 'ID da amizade não fornecido',
+        mensagem: '🌑 Por favor, forneça o ID da solicitação'
+      });
+    }
+
     const amizade = await Amizade.findById(amizadeId);
 
     if (!amizade) {
@@ -470,10 +615,14 @@ exports.rejeitarSolicitacaoAmizade = async (req, res) => {
       });
     }
 
-    if (amizade.usuario2.toString() !== req.usuario._id.toString()) {
+    // Verificar se o usuário atual é o destinatário (usuario2) da solicitação
+    const usuario2Id = amizade.usuario2.toString();
+    const usuarioAtualId = req.usuario._id.toString();
+    
+    if (usuario2Id !== usuarioAtualId) {
       return res.status(403).json({
         erro: 'Acesso negado',
-        mensagem: '⚔️ Você não pode rejeitar esta solicitação'
+        mensagem: '⚔️ Você não pode recusar esta solicitação. Apenas o destinatário pode recusar.'
       });
     }
 
@@ -595,10 +744,15 @@ exports.buscarUsuarios = async (req, res) => {
       });
     }
 
+    // Escapar caracteres especiais da query para regex seguro
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    
+    // Buscar por nome de usuário (busca parcial, case-insensitive)
+    // Também busca por palavras parciais (ex: "jo" encontra "João", "Joana", etc)
     const usuarios = await Usuario.find({
       $or: [
-        { nomeUsuario: { $regex: query, $options: 'i' } },
-        { email: { $regex: query, $options: 'i' } }
+        { nomeUsuario: { $regex: escapedQuery, $options: 'i' } },
+        { email: { $regex: escapedQuery, $options: 'i' } }
       ],
       _id: { $ne: req.usuario._id }
     })

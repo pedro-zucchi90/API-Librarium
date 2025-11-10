@@ -243,6 +243,33 @@ async function iniciarServidor() {
   }
 }
 
+// ===== TRATAMENTO DE ERROS NÃO CAPTURADOS =====
+
+// Prevenir que erros não capturados façam o servidor crashar
+process.on('uncaughtException', (erro) => {
+  logger.error('💥 Erro não capturado (uncaughtException):', {
+    error: erro.message,
+    stack: erro.stack,
+    timestamp: new Date().toISOString()
+  });
+  
+  // Não fazer process.exit() - deixar o servidor continuar rodando
+  // Apenas logar o erro para não perder a conexão
+  console.error('⚠️ Erro não capturado, mas servidor continua rodando:', erro.message);
+});
+
+// Prevenir que promises rejeitadas façam o servidor crashar
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('💥 Promise rejeitada não tratada (unhandledRejection):', {
+    reason: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack : undefined,
+    timestamp: new Date().toISOString()
+  });
+  
+  // Não fazer process.exit() - deixar o servidor continuar rodando
+  console.error('⚠️ Promise rejeitada não tratada, mas servidor continua rodando:', reason);
+});
+
 // ===== TRATAMENTO DE SINAIS =====
 
 // Graceful shutdown

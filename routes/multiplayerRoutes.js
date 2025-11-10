@@ -11,6 +11,7 @@ router.post('/batalha/criar', multiplayerController.criarBatalha);
 router.post('/batalha/:id/aceitar', multiplayerController.aceitarBatalha);
 router.post('/batalha/:id/finalizar', multiplayerController.finalizarBatalha);
 router.get('/batalha', multiplayerController.listarBatalhas);
+router.get('/batalha/pendentes', multiplayerController.listarBatalhasPendentes);
 
 // ===== SISTEMA DE DESAFIOS =====
 router.post('/desafio', multiplayerController.criarDesafio);
@@ -19,6 +20,7 @@ router.get('/desafio', multiplayerController.listarDesafios);
 
 // ===== SISTEMA DE MENSAGENS =====
 router.post('/mensagem', multiplayerController.enviarMensagem);
+router.get('/mensagem/conversas', multiplayerController.listarConversas);
 router.get('/mensagem/conversa/:usuarioId', multiplayerController.obterConversa);
 router.put('/mensagem/:id/ler', multiplayerController.lerMensagem);
 router.get('/mensagem/nao-lidas', multiplayerController.mensagensNaoLidas);
