@@ -26,11 +26,20 @@ const storage = multer.diskStorage({
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|gif|webp/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
-
-  if (mimetype && extname) {
+  
+  // Verificar mimetype (pode ser undefined em alguns casos)
+  let mimetypeValid = false;
+  if (file.mimetype) {
+    mimetypeValid = allowedTypes.test(file.mimetype);
+  }
+  
+  // Aceitar se a extensão for válida OU se o mimetype for válido
+  // Isso permite que arquivos sem mimetype correto mas com extensão válida sejam aceitos
+  if (extname || mimetypeValid) {
+    console.log(`Arquivo aceito: ${file.originalname}, mimetype: ${file.mimetype || 'não fornecido'}, extensão: ${path.extname(file.originalname)}`);
     return cb(null, true);
   } else {
+    console.log(`Arquivo rejeitado: ${file.originalname}, mimetype: ${file.mimetype || 'não fornecido'}, extensão: ${path.extname(file.originalname)}`);
     cb(new Error('Apenas imagens são permitidas! (jpeg, jpg, png, gif, webp)'));
   }
 };
