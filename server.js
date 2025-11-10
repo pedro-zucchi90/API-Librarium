@@ -216,7 +216,7 @@ async function iniciarServidor() {
     await inicializarServicos();
 
     // Iniciar servidor
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log('╔══════════════════════════════════════════════════════════════╗');
       console.log('║                    🗡️ LIBRARIUM BACKEND                       ║');
       console.log('╠══════════════════════════════════════════════════════════════╣');

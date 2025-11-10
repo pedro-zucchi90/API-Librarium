@@ -396,6 +396,8 @@ exports.conquistas = async (req, res) => {
 exports.uploadFotoPerfil = async (req, res) => {
   try {
     const { usuario } = req;
+    const path = require('path');
+    const fs = require('fs');
     
     if (!req.file) {
       return res.status(400).json({
@@ -404,16 +406,32 @@ exports.uploadFotoPerfil = async (req, res) => {
       });
     }
 
+    // Validar tamanho do arquivo (já validado pelo multer, mas verificação adicional)
+    if (req.file.size > 5 * 1024 * 1024) {
+      // Deletar arquivo se exceder o limite
+      const filePath = path.join(__dirname, '..', 'uploads', 'perfis', req.file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      return res.status(400).json({
+        erro: 'Arquivo muito grande',
+        mensagem: 'A imagem deve ter no máximo 5MB'
+      });
+    }
+
     // URL da foto de perfil (relativa ao servidor)
     const fotoUrl = `/uploads/perfis/${req.file.filename}`;
     
     // Remover foto antiga se existir
     if (usuario.fotoPerfil && usuario.fotoPerfil.startsWith('/uploads/perfis/')) {
-      const path = require('path');
-      const fs = require('fs');
       const oldFilePath = path.join(__dirname, '..', usuario.fotoPerfil);
       if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath);
+        try {
+          fs.unlinkSync(oldFilePath);
+        } catch (err) {
+          console.warn('Aviso: Não foi possível remover foto antiga:', err.message);
+          // Não falhar o upload se não conseguir remover a foto antiga
+        }
       }
     }
 
@@ -424,10 +442,30 @@ exports.uploadFotoPerfil = async (req, res) => {
     res.json({
       sucesso: true,
       mensagem: 'Foto de perfil atualizada com sucesso!',
-      fotoPerfil: fotoUrl
+      fotoPerfil: fotoUrl,
+      usuario: {
+        _id: usuario._id,
+        nomeUsuario: usuario.nomeUsuario,
+        fotoPerfil: usuario.fotoPerfil
+      }
     });
   } catch (erro) {
     console.error('Erro ao fazer upload da foto de perfil:', erro);
+    
+    // Tentar limpar arquivo em caso de erro
+    if (req.file) {
+      try {
+        const path = require('path');
+        const fs = require('fs');
+        const filePath = path.join(__dirname, '..', 'uploads', 'perfis', req.file.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (cleanupError) {
+        console.error('Erro ao limpar arquivo após erro:', cleanupError);
+      }
+    }
+    
     res.status(500).json({
       erro: 'Erro interno do servidor',
       mensagem: '💀 Não foi possível fazer upload da foto...'

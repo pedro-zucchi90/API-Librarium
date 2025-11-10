@@ -1,7 +1,7 @@
 const express = require('express');
 const { autenticarUsuario } = require('../middleware/auth');
 const userController = require('../controllers/userController');
-const upload = require('../middleware/upload');
+const { upload, handleMulterError } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -35,7 +35,7 @@ router.put('/preferencias', async (req, res) => userController.atualizarPreferen
 router.post('/adicionar-xp', async (req, res) => userController.adicionarXP(req, res));
 
 // ===== FOTO DE PERFIL =====
-router.post('/foto-perfil', upload.single('foto'), async (req, res) => userController.uploadFotoPerfil(req, res));
+router.post('/foto-perfil', upload.single('foto'), handleMulterError, async (req, res) => userController.uploadFotoPerfil(req, res));
 router.delete('/foto-perfil', async (req, res) => userController.removerFotoPerfil(req, res));
 
 module.exports = router;

@@ -35,6 +35,45 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+// Middleware para tratamento de erros do multer
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        erro: 'Arquivo muito grande',
+        mensagem: 'A imagem deve ter no máximo 5MB'
+      });
+    }
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({
+        erro: 'Muitos arquivos',
+        mensagem: 'Apenas uma imagem por vez é permitida'
+      });
+    }
+    return res.status(400).json({
+      erro: 'Erro no upload',
+      mensagem: err.message || 'Erro ao processar o arquivo'
+    });
+  }
+  
+  if (err) {
+    // Erro do fileFilter
+    if (err.message && err.message.includes('Apenas imagens')) {
+      return res.status(400).json({
+        erro: 'Tipo de arquivo inválido',
+        mensagem: 'Apenas imagens são permitidas! (jpeg, jpg, png, gif, webp)'
+      });
+    }
+    
+    return res.status(400).json({
+      erro: 'Erro no upload',
+      mensagem: err.message || 'Erro ao processar o arquivo'
+    });
+  }
+  
+  next();
+};
+
 // Configuração do multer
 const upload = multer({
   storage: storage,
@@ -44,5 +83,8 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
-module.exports = upload;
+module.exports = {
+  upload,
+  handleMulterError
+};
 

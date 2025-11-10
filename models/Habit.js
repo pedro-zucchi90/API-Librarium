@@ -1,5 +1,9 @@
 const mongoose = require('mongoose');
 
+// Adiciona campo virtual computado ultimaDataConclusao,
+// que retorna a última data de conclusão relacionada ao hábito (Progress mais recente),
+// simulando o getter usado pelo frontend (habit_card.dart).
+
 const esquemaHabito = new mongoose.Schema({
   idUsuario: {
     type: mongoose.Schema.Types.ObjectId,
@@ -70,7 +74,23 @@ const esquemaHabito = new mongoose.Schema({
     taxaConclusao: { type: Number, default: 0 }
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Campo virtual: ultimaDataConclusao
+esquemaHabito.virtual('ultimaDataConclusao').get(async function () {
+  // Precisa de require dinâmico para evitar issues de dependência
+  const Progresso = require('./Progress');
+
+  // Busca último progresso vinculado a este hábito
+  // Retorna a data da conclusão mais recente (ou null se não houver progresso)
+  const ultimo = await Progresso.findOne({ idHabito: this._id })
+    .sort({ data: -1 })
+    .select('data')
+    .lean();
+  return ultimo ? ultimo.data : null;
 });
 
 // Calcular taxa de conclusão
