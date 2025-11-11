@@ -408,7 +408,6 @@ exports.uploadFotoPerfil = async (req, res) => {
 
     // Validar tamanho do arquivo (já validado pelo multer, mas verificação adicional)
     if (req.file.size > 5 * 1024 * 1024) {
-      // Deletar arquivo se exceder o limite
       const filePath = path.join(__dirname, '..', 'uploads', 'perfis', req.file.filename);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);

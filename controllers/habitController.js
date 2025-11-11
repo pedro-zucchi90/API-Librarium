@@ -358,6 +358,30 @@ exports.concluir = async (req, res) => {
     const nivelAnterior = req.usuario.nivel;
     await req.usuario.adicionarExperiencia(habito.recompensaExperiencia);
 
+    // Verificar conquistas automaticamente após concluir hábito
+    let conquistasDesbloqueadas = [];
+    try {
+      const AchievementService = require('../services/achievementService');
+      conquistasDesbloqueadas = await AchievementService.verificarConquistas(req.usuario._id);
+      
+      if (conquistasDesbloqueadas.length > 0) {
+        logger.business('Conquistas desbloqueadas após conclusão de hábito', {
+          requestId,
+          userId: req.usuario._id,
+          habitId: habito._id,
+          conquistas: conquistasDesbloqueadas.map(c => c.conquista.titulo)
+        });
+      }
+    } catch (erroConquista) {
+      // Não falhar a requisição se houver erro na verificação de conquistas
+      logger.errorLog('Erro ao verificar conquistas após conclusão de hábito', {
+        requestId,
+        userId: req.usuario._id,
+        habitId: habito._id,
+        error: erroConquista.message
+      });
+    }
+
     logger.business('Hábito concluído com sucesso', {
       requestId,
       userId: req.usuario._id,
@@ -366,7 +390,8 @@ exports.concluir = async (req, res) => {
       nivelAnterior,
       nivelNovo: req.usuario.nivel,
       totalConclusoes: habito.estatisticas.totalConclusoes,
-      sequenciaAtual: habito.sequencia.atual
+      sequenciaAtual: habito.sequencia.atual,
+      conquistasDesbloqueadas: conquistasDesbloqueadas.length
     });
 
     const duration = Date.now() - startTime;
@@ -378,7 +403,8 @@ exports.concluir = async (req, res) => {
         'check_progresso',
         'create_progresso',
         'update_habito',
-        'update_user'
+        'update_user',
+        'verificar_conquistas'
       ]
     });
 
@@ -388,6 +414,7 @@ exports.concluir = async (req, res) => {
       progresso: novoProgresso,
       experienciaGanha: habito.recompensaExperiencia,
       novoNivel: req.usuario.nivel,
+      conquistasDesbloqueadas: conquistasDesbloqueadas.length > 0 ? conquistasDesbloqueadas : undefined,
       requestId
     });
   } catch (erro) {

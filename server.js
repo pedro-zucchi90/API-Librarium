@@ -207,6 +207,8 @@ async function inicializarServicos() {
 
 // ===== INICIALIZAÇÃO DO SERVIDOR =====
 
+let server = null;
+
 async function iniciarServidor() {
   try {
     // Conectar ao banco de dados
@@ -215,8 +217,8 @@ async function iniciarServidor() {
     // Inicializar serviços
     await inicializarServicos();
 
-    // Iniciar servidor
-    app.listen(PORT, '0.0.0.0', () => {
+    // Iniciar servidor com configurações de keep-alive
+    server = app.listen(PORT, '0.0.0.0', () => {
       console.log('╔══════════════════════════════════════════════════════════════╗');
       console.log('║                    🗡️ LIBRARIUM BACKEND                       ║');
       console.log('╠══════════════════════════════════════════════════════════════╣');
@@ -237,9 +239,49 @@ async function iniciarServidor() {
       console.log('╚══════════════════════════════════════════════════════════════╝');
     });
 
+    // Configurar keep-alive e timeouts do servidor
+    server.keepAliveTimeout = 65000; // 65 segundos
+    server.headersTimeout = 66000; // 66 segundos (deve ser maior que keepAliveTimeout)
+    
+    // Tratamento de erros do servidor
+    server.on('error', (erro) => {
+      if (erro.code === 'EADDRINUSE') {
+        console.error(`❌ Porta ${PORT} já está em uso. Tente outra porta.`);
+        process.exit(1);
+      } else {
+        logger.error('💥 Erro no servidor HTTP:', {
+          error: erro.message,
+          stack: erro.stack,
+          timestamp: new Date().toISOString()
+        });
+        // Não fazer process.exit() - tentar reiniciar
+        console.error('⚠️ Erro no servidor, mas continuando...');
+      }
+    });
+
+    // Health check interno periódico
+    setInterval(() => {
+      const mongoose = require('mongoose');
+      if (mongoose.connection.readyState !== 1) {
+        logger.warn('⚠️ MongoDB não está conectado. Estado:', mongoose.connection.readyState);
+      }
+    }, 30000); // Verificar a cada 30 segundos
+
   } catch (erro) {
+    logger.error('💥 Erro ao iniciar servidor:', {
+      error: erro.message,
+      stack: erro.stack,
+      timestamp: new Date().toISOString()
+    });
     console.error('💥 Erro ao iniciar servidor:', erro);
-    process.exit(1);
+    // Não fazer process.exit(1) imediatamente - tentar reiniciar
+    console.log('🔄 Tentando reiniciar servidor em 10 segundos...');
+    setTimeout(() => {
+      iniciarServidor().catch((e) => {
+        console.error('💥 Falha ao reiniciar servidor:', e);
+        process.exit(1);
+      });
+    }, 10000);
   }
 }
 
@@ -273,37 +315,39 @@ process.on('unhandledRejection', (reason, promise) => {
 // ===== TRATAMENTO DE SINAIS =====
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('🔄 Recebido SIGTERM, encerrando servidor...');
+const gracefulShutdown = async (signal) => {
+  console.log(`🔄 Recebido ${signal}, encerrando servidor graciosamente...`);
   
   try {
+    // Parar de aceitar novas conexões
+    if (server) {
+      server.close(() => {
+        console.log('✅ Servidor HTTP fechado');
+      });
+      
+      // Forçar fechamento após 10 segundos se não fechar graciosamente
+      setTimeout(() => {
+        console.error('⚠️ Forçando fechamento do servidor...');
+        process.exit(1);
+      }, 10000);
+    }
+    
     // Fechar conexões do banco
     const mongoose = require('mongoose');
-    await mongoose.connection.close();
-    console.log('🗡️ Conexão MongoDB fechada');
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.close();
+      console.log('🗡️ Conexão MongoDB fechada');
+    }
     
     process.exit(0);
   } catch (erro) {
     console.error('💥 Erro durante shutdown:', erro);
     process.exit(1);
   }
-});
+};
 
-process.on('SIGINT', async () => {
-  console.log('🔄 Recebido SIGINT, encerrando servidor...');
-  
-  try {
-    // Fechar conexões do banco
-    const mongoose = require('mongoose');
-    await mongoose.connection.close();
-    console.log('🗡️ Conexão MongoDB fechada');
-    
-    process.exit(0);
-  } catch (erro) {
-    console.error('💥 Erro durante shutdown:', erro);
-    process.exit(1);
-  }
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // ===== INICIAR SERVIDOR =====
 

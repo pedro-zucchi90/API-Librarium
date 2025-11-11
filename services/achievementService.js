@@ -63,7 +63,7 @@ class AchievementService {
 
       case 'habitos_categoria': {
         const resultado = await this.verificarHabitosCategoria(usuario, valor, periodo);
-        return resultado >= valor;
+        return resultado;
       }
 
       case 'sequencia_perfeita': {
@@ -73,7 +73,7 @@ class AchievementService {
 
       case 'habitos_diferentes': {
         const resultado = await this.verificarHabitosDiferentes(usuario, valor, periodo);
-        return resultado >= valor;
+        return resultado;
       }
 
       case 'eficiencia_semanal': {
@@ -93,7 +93,7 @@ class AchievementService {
 
       case 'variedade_categorias': {
         const resultado = await this.verificarVariedadeCategorias(usuario, valor);
-        return resultado >= valor;
+        return resultado;
       }
 
       default:
@@ -117,7 +117,7 @@ class AchievementService {
         status: 'concluido'
       }).sort({ data: 1 });
 
-      if (progressos.length === 0) {return false};
+      if (progressos.length === 0) {return 0};
 
       // Agrupar por dia único (data sem hora)
       const diasComProgresso = new Set();
@@ -132,7 +132,7 @@ class AchievementService {
         .map(timestamp => new Date(timestamp))
         .sort((a, b) => a - b);
       
-      if (diasOrdenados.length === 0) {return false};
+      if (diasOrdenados.length === 0) {return 0};
       
       // Calcular maior sequência de dias consecutivos
       let maiorSequencia = 1;
@@ -153,10 +153,10 @@ class AchievementService {
         }
       }
 
-      return maiorSequencia >= valor;
+      return maiorSequencia;
     } catch (erro) {
       console.error('Erro ao verificar sequência:', erro);
-      return false;
+      return 0;
     }
   }
 
@@ -181,12 +181,21 @@ class AchievementService {
   // Verificar dias ativo (com pelo menos um hábito concluído)
   static async verificarDiasAtivo (usuario, valor) {
     try {
-      const diasAtivo = await Progresso.distinct('data', {
+      // Buscar todos os progressos concluídos
+      const progressos = await Progresso.find({
         idUsuario: usuario._id,
         status: 'concluido'
       });
 
-      return diasAtivo.length >= valor;
+      // Normalizar datas para dias únicos (sem hora)
+      const diasUnicos = new Set();
+      progressos.forEach(progresso => {
+        const dataProgresso = new Date(progresso.data);
+        dataProgresso.setHours(0, 0, 0, 0);
+        diasUnicos.add(dataProgresso.getTime());
+      });
+
+      return diasUnicos.size >= valor;
     } catch (erro) {
       console.error('Erro ao verificar dias ativo:', erro);
       return false;
@@ -230,6 +239,7 @@ class AchievementService {
         }
       ]);
 
+      // Retornar true se encontrou pelo menos uma categoria com o valor necessário
       return habitosPorCategoria.length > 0;
     } catch (erro) {
       console.error('Erro ao verificar hábitos por categoria:', erro);
@@ -248,34 +258,40 @@ class AchievementService {
         ativo: true
       });
 
-      if (habitosAtivos === 0) {return false};
+      if (habitosAtivos === 0) {return 0};
 
-      // Buscar dias com todos os hábitos concluídos
-      const diasPerfeitos = await Progresso.aggregate([
-        {
-          $match: {
-            idUsuario: usuario._id,
-            data: { $gte: dataInicio },
-            status: 'concluido'
-          }
-        },
-        {
-          $group: {
-            _id: '$data',
-            habitosConcluidos: { $sum: 1 }
-          }
-        },
-        {
-          $match: {
-            habitosConcluidos: { $gte: habitosAtivos }
-          }
+      // Buscar todos os progressos do período
+      const progressos = await Progresso.find({
+        idUsuario: usuario._id,
+        data: { $gte: dataInicio },
+        status: 'concluido'
+      });
+
+      // Agrupar por dia único e contar hábitos concluídos por dia
+      const diasComHabitos = new Map();
+      progressos.forEach(progresso => {
+        const dataProgresso = new Date(progresso.data);
+        dataProgresso.setHours(0, 0, 0, 0);
+        const diaKey = dataProgresso.getTime();
+        
+        if (!diasComHabitos.has(diaKey)) {
+          diasComHabitos.set(diaKey, new Set());
         }
-      ]);
+        diasComHabitos.get(diaKey).add(progresso.idHabito.toString());
+      });
 
-      return diasPerfeitos.length >= valor;
+      // Contar dias perfeitos (todos os hábitos concluídos)
+      let diasPerfeitos = 0;
+      for (const [diaKey, habitosConcluidos] of diasComHabitos.entries()) {
+        if (habitosConcluidos.size >= habitosAtivos) {
+          diasPerfeitos++;
+        }
+      }
+
+      return diasPerfeitos;
     } catch (erro) {
       console.error('Erro ao verificar sequência perfeita:', erro);
-      return false;
+      return 0;
     }
   }
 
@@ -290,6 +306,7 @@ class AchievementService {
         status: 'concluido'
       });
 
+      // Retornar true se o número de hábitos diferentes é maior ou igual ao valor
       return habitosDiferentes.length >= valor;
     } catch (erro) {
       console.error('Erro ao verificar hábitos diferentes:', erro);
@@ -429,6 +446,7 @@ class AchievementService {
         }
       ]);
 
+      // Retornar true se o número de categorias diferentes é maior ou igual ao valor
       return categorias.length >= valor;
     } catch (erro) {
       console.error('Erro ao verificar variedade de categorias:', erro);
@@ -467,25 +485,34 @@ class AchievementService {
       conquista.desbloqueadaEm = new Date();
       await conquista.save();
 
+      // Recarregar usuário para ter dados atualizados
+      const usuarioAtualizado = await Usuario.findById(usuario._id);
+      if (!usuarioAtualizado) {
+        throw new Error('Usuário não encontrado ao desbloquear conquista');
+      }
+
       // Adicionar XP ao usuário
-      const xpAnterior = usuario.experiencia;
-      await usuario.adicionarExperiencia(conquista.experienciaRecompensa);
-      const xpNovo = usuario.experiencia;
+      const xpAnterior = usuarioAtualizado.experiencia;
+      await usuarioAtualizado.adicionarExperiencia(conquista.experienciaRecompensa);
+      await usuarioAtualizado.save();
+      
+      // Recarregar para obter XP atualizado
+      const usuarioFinal = await Usuario.findById(usuario._id);
+      const xpNovo = usuarioFinal ? usuarioFinal.experiencia : xpAnterior + conquista.experienciaRecompensa;
 
       // Verificar se subiu de nível
       const nivelAnterior = Math.floor(xpAnterior / 100) + 1;
       const nivelNovo = Math.floor(xpNovo / 100) + 1;
 
-      // Criar notificação
-      const notificacao = Notificacao.criarConquista(usuario._id, conquista);
-      await notificacao.save();
-
-      // Se subiu de nível, criar notificação adicional
-      if (nivelNovo > nivelAnterior) {
-        const tituloNovo = this.obterTituloPorNivel(nivelNovo);
-        const notificacaoNivel = Notificacao.criarNivel(usuario._id, nivelAnterior, nivelNovo, tituloNovo);
-        await notificacaoNivel.save();
-      }
+      // Log da conquista desbloqueada (notificações podem ser adicionadas depois)
+      logger.info('Conquista desbloqueada', {
+        usuarioId: usuario._id,
+        conquistaId: conquista._id,
+        titulo: conquista.titulo,
+        xpGanho: conquista.experienciaRecompensa,
+        nivelAnterior,
+        nivelNovo
+      });
 
       return {
         conquista,
@@ -496,6 +523,12 @@ class AchievementService {
       };
     } catch (erro) {
       console.error('Erro ao desbloquear conquista:', erro);
+      logger.error('Erro ao desbloquear conquista', {
+        erro: erro.message,
+        stack: erro.stack,
+        conquistaId: conquista._id,
+        usuarioId: usuario._id
+      });
       throw erro;
     }
   }
