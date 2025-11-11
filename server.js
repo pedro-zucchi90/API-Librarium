@@ -134,7 +134,6 @@ app.get('/api/saude', (req, res) => {
     sucesso: true,
     mensagem: 'Librarium está funcionando',
     timestamp: new Date().toISOString(),
-    versao: '1.0.0',
     ambiente: process.env.NODE_ENV || 'development',
     uptime: process.uptime(),
     funcionalidades: {
