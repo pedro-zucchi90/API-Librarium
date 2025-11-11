@@ -132,7 +132,7 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.get('/api/saude', (req, res) => {
   res.json({ 
     sucesso: true,
-    mensagem: '🗡️ Librarium está funcionando perfeitamente!',
+    mensagem: 'Librarium está funcionando',
     timestamp: new Date().toISOString(),
     versao: '1.0.0',
     ambiente: process.env.NODE_ENV || 'development',
@@ -143,9 +143,7 @@ app.get('/api/saude', (req, res) => {
       conquistas: true,
       avatarEvolutivo: true,
       multiplayer: true,
-      integracoes: true,
-      exportacao: true,
-      sistemaConquistas: true
+      sistemaConquistas: false
     },
   });
 });
@@ -188,20 +186,20 @@ async function inicializarServicos() {
     // Limpeza automática de dados (a cada 24 horas)
     setInterval(async () => {
       try {
-        logger.info('🔄 Iniciando limpeza automática de dados...');
+        logger.info('Iniciando limpeza automática de dados...');
 
         // Limpar conquistas antigas
         await AchievementService.limparConquistasAntigas(90);
 
-        logger.info('✅ Limpeza automática concluída');
+        logger.info('Limpeza automática concluída');
       } catch (erro) {
-        logger.error('❌ Erro na limpeza automática:', erro);
+        logger.error('Erro na limpeza automática:', erro);
       }
     }, 24 * 60 * 60 * 1000);
 
-    logger.info('✅ Serviços inicializados com sucesso');
+    logger.info('Serviços inicializados com sucesso');
   } catch (erro) {
-    logger.error('❌ Erro ao inicializar serviços:', erro);
+    logger.error('Erro ao inicializar serviços:', erro);
   }
 }
 
@@ -246,7 +244,7 @@ async function iniciarServidor() {
     // Tratamento de erros do servidor
     server.on('error', (erro) => {
       if (erro.code === 'EADDRINUSE') {
-        console.error(`❌ Porta ${PORT} já está em uso. Tente outra porta.`);
+        console.error(`Porta ${PORT} já está em uso. Tente outra porta.`);
         process.exit(1);
       } else {
         logger.error('💥 Erro no servidor HTTP:', {
@@ -255,7 +253,7 @@ async function iniciarServidor() {
           timestamp: new Date().toISOString()
         });
         // Não fazer process.exit() - tentar reiniciar
-        console.error('⚠️ Erro no servidor, mas continuando...');
+        console.error('Erro no servidor, mas continuando...');
       }
     });
 
@@ -263,22 +261,22 @@ async function iniciarServidor() {
     setInterval(() => {
       const mongoose = require('mongoose');
       if (mongoose.connection.readyState !== 1) {
-        logger.warn('⚠️ MongoDB não está conectado. Estado:', mongoose.connection.readyState);
+        logger.warn('MongoDB não está conectado. Estado:', mongoose.connection.readyState);
       }
     }, 30000); // Verificar a cada 30 segundos
 
   } catch (erro) {
-    logger.error('💥 Erro ao iniciar servidor:', {
+    logger.error('Erro ao iniciar servidor:', {
       error: erro.message,
       stack: erro.stack,
       timestamp: new Date().toISOString()
     });
-    console.error('💥 Erro ao iniciar servidor:', erro);
+    console.error('Erro ao iniciar servidor:', erro);
     // Não fazer process.exit(1) imediatamente - tentar reiniciar
-    console.log('🔄 Tentando reiniciar servidor em 10 segundos...');
+    console.log('Tentando reiniciar servidor em 10 segundos...');
     setTimeout(() => {
       iniciarServidor().catch((e) => {
-        console.error('💥 Falha ao reiniciar servidor:', e);
+        console.error('Falha ao reiniciar servidor:', e);
         process.exit(1);
       });
     }, 10000);
@@ -289,7 +287,7 @@ async function iniciarServidor() {
 
 // Prevenir que erros não capturados façam o servidor crashar
 process.on('uncaughtException', (erro) => {
-  logger.error('💥 Erro não capturado (uncaughtException):', {
+  logger.error('Erro não capturado (uncaughtException):', {
     error: erro.message,
     stack: erro.stack,
     timestamp: new Date().toISOString()
@@ -297,37 +295,37 @@ process.on('uncaughtException', (erro) => {
   
   // Não fazer process.exit() - deixar o servidor continuar rodando
   // Apenas logar o erro para não perder a conexão
-  console.error('⚠️ Erro não capturado, mas servidor continua rodando:', erro.message);
+  console.error('Erro não capturado, mas servidor continua rodando:', erro.message);
 });
 
 // Prevenir que promises rejeitadas façam o servidor crashar
 process.on('unhandledRejection', (reason, promise) => {
-  logger.error('💥 Promise rejeitada não tratada (unhandledRejection):', {
+  logger.error('Promise rejeitada não tratada (unhandledRejection):', {
     reason: reason instanceof Error ? reason.message : String(reason),
     stack: reason instanceof Error ? reason.stack : undefined,
     timestamp: new Date().toISOString()
   });
   
   // Não fazer process.exit() - deixar o servidor continuar rodando
-  console.error('⚠️ Promise rejeitada não tratada, mas servidor continua rodando:', reason);
+  console.error('Promise rejeitada não tratada, mas servidor continua rodando:', reason);
 });
 
 // ===== TRATAMENTO DE SINAIS =====
 
 // Graceful shutdown
 const gracefulShutdown = async (signal) => {
-  console.log(`🔄 Recebido ${signal}, encerrando servidor graciosamente...`);
+  console.log(`Recebido ${signal}, encerrando servidor graciosamente...`);
   
   try {
     // Parar de aceitar novas conexões
     if (server) {
       server.close(() => {
-        console.log('✅ Servidor HTTP fechado');
+        console.log('Servidor HTTP fechado');
       });
       
       // Forçar fechamento após 10 segundos se não fechar graciosamente
       setTimeout(() => {
-        console.error('⚠️ Forçando fechamento do servidor...');
+        console.error('Forçando fechamento do servidor...');
         process.exit(1);
       }, 10000);
     }
@@ -336,12 +334,12 @@ const gracefulShutdown = async (signal) => {
     const mongoose = require('mongoose');
     if (mongoose.connection.readyState === 1) {
       await mongoose.connection.close();
-      console.log('🗡️ Conexão MongoDB fechada');
+      console.log('Conexão MongoDB fechada');
     }
     
     process.exit(0);
   } catch (erro) {
-    console.error('💥 Erro durante shutdown:', erro);
+    console.error('Erro durante shutdown:', erro);
     process.exit(1);
   }
 };
